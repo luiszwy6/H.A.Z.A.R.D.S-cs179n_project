@@ -1066,8 +1066,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 724d4f4ba336dfa418b57f233d35d104, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAimSettings
-  aimWalkSpeed: 4
+  aimWalkSpeed: 2.5
   aimCrouchSpeed: 2
+  aimProneSpeed: 0.7
   cameraTransform: {fileID: 1161148377}
   aimCamera: {fileID: 330585545}
   mouseAimLayers:

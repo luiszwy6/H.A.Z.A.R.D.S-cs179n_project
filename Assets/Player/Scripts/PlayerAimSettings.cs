@@ -7,6 +7,7 @@ public class PlayerAimSettings : MonoBehaviour
     [Header("Aim Move Speeds")]
     public float aimWalkSpeed = 2.5f;
     public float aimCrouchSpeed = 1.5f;
+    public float aimProneSpeed = 1.0f;
 
     [Header("Camera")]
     public Transform cameraTransform;
@@ -17,6 +18,8 @@ public class PlayerAimSettings : MonoBehaviour
     public float mouseAimDistance = 100f;
 
     public bool IsAiming { get; private set; }
+    public bool IsAimHeld => aimAction != null && aimAction.IsPressed();
+    public bool AimPressedThisFrame => aimAction != null && aimAction.WasPressedThisFrame();
     public Vector2 LookInput { get; private set; }
     public bool UsingMouseScheme { get; private set; }
 
@@ -50,10 +53,12 @@ public class PlayerAimSettings : MonoBehaviour
         aimAction?.Disable();
     }
 
-    public float GetMoveSpeed(bool isCrouching, float fallbackSpeed)
+    public float GetMoveSpeed(bool isCrouching, bool isProne, float fallbackSpeed, bool isActuallyAiming)
     {
-        if (!IsAiming) return fallbackSpeed;
-        return isCrouching ? aimCrouchSpeed : aimWalkSpeed;
+        if (!isActuallyAiming) return fallbackSpeed;
+        if (isProne) return aimProneSpeed;
+        if (isCrouching) return aimCrouchSpeed;
+        return aimWalkSpeed;
     }
 
     public Vector3 TickAimAndGetFacingDirection(Transform actor, Vector3 moveDirWorld, bool isCrouching)

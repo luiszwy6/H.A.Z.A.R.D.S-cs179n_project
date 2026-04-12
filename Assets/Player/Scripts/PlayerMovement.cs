@@ -57,6 +57,9 @@ public class PlayerMovement : MonoBehaviour
     private bool proneHoldInProgress;
     private bool suppressNextCrouchTap;
 
+    // Aim/Run arbitration
+    private bool preferAimWhenBothHeld = true;
+
     // Debug log
     private string lastLoggedState = "";
     private bool isWalkingState;
@@ -184,14 +187,6 @@ public class PlayerMovement : MonoBehaviour
             moveDirWorld.Normalize();
         }
 
-        // Run has the highest priority: cancel crouch/prone first
-        bool runPriorityActive = runHeld && wantsToMove && isGrounded && !proneHoldInProgress;
-        if (runPriorityActive)
-        {
-            isCrouching = false;
-            isProne = false;
-        }
-
         bool divePressed = !externalMovementLock &&
                            diveAction != null &&
                            diveAction.WasPerformedThisFrame();
@@ -206,18 +201,79 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
+        bool runRequested = !externalMovementLock &&
+                            runHeld &&
+                            wantsToMove &&
+                            isGrounded &&
+                            !proneHoldInProgress;
+
+        bool runPressedThisFrame = !externalMovementLock &&
+                                   runAction != null &&
+                                   runAction.WasPressedThisFrame();
+
+        bool rawAimHeld = false;
+        bool aimPressedThisFrame = false;
+
         Vector3 facingDir = moveDirWorld;
+
         if (aimSettings != null)
         {
-            facingDir = aimSettings.TickAimAndGetFacingDirection(transform, moveDirWorld, isCrouching || isProne);
-            isAiming = aimSettings.IsAiming;
+            facingDir = aimSettings.TickAimAndGetFacingDirection(
+                transform,
+                moveDirWorld,
+                isCrouching || isProne
+            );
+
+            rawAimHeld = aimSettings.IsAimHeld;
+            aimPressedThisFrame = aimSettings.AimPressedThisFrame;
+        }
+
+        if (aimPressedThisFrame)
+            preferAimWhenBothHeld = true;
+
+        if (runPressedThisFrame)
+            preferAimWhenBothHeld = false;
+
+        bool wantsToRun = false;
+        isAiming = false;
+
+        if (runRequested && rawAimHeld)
+        {
+            if (preferAimWhenBothHeld)
+            {
+                isAiming = true;
+                wantsToRun = false;
+            }
+            else
+            {
+                isAiming = false;
+                wantsToRun = true;
+            }
+        }
+        else if (rawAimHeld)
+        {
+            isAiming = true;
+            wantsToRun = false;
+        }
+        else if (runRequested)
+        {
+            isAiming = false;
+            wantsToRun = true;
         }
         else
         {
             isAiming = false;
+            wantsToRun = false;
         }
 
-        bool wantsToRun = runPriorityActive && !isAiming;
+        if (wantsToRun)
+        {
+            isCrouching = false;
+            isProne = false;
+
+            if (moveDirWorld.sqrMagnitude > 0.0001f)
+                facingDir = moveDirWorld;
+        }
 
         float baseSpeed;
         if (isProne) baseSpeed = proneSpeed;
@@ -226,8 +282,10 @@ public class PlayerMovement : MonoBehaviour
         else baseSpeed = walkSpeed;
 
         float currentSpeed = baseSpeed;
-        if (aimSettings != null && !isProne)
-            currentSpeed = aimSettings.GetMoveSpeed(isCrouching, baseSpeed);
+        if (aimSettings != null)
+        {
+            currentSpeed = aimSettings.GetMoveSpeed(isCrouching, isProne, baseSpeed, isAiming);
+        }
 
         Vector3 horizontal = moveDirWorld * currentSpeed * inputMagnitude;
 
@@ -252,6 +310,7 @@ public class PlayerMovement : MonoBehaviour
             bool isMoving = wantsToMove;
             bool isRunning = wantsToRun;
             bool isWalking = isMoving && !isRunning;
+            bool isIdle = !isMoving && !isCrouching && !isProne && !isDiving && !isAiming;
 
             Vector3 localMove = Vector3.zero;
             if (horizontal.sqrMagnitude > 0.0001f)
@@ -270,12 +329,14 @@ public class PlayerMovement : MonoBehaviour
                 animator.SetFloat("SpeedZ", localMove.z, speedDampTime, dt);
             }
 
+            animator.SetBool("IsMoving", isMoving);
             animator.SetBool("IsCrouching", isCrouching);
             animator.SetBool("IsProne", isProne);
             animator.SetBool("IsDiving", isDiving);
             animator.SetBool("IsRunning", isRunning);
             animator.SetBool("IsWalking", isWalking);
             animator.SetBool("IsAiming", isAiming);
+            animator.SetBool("IsIdle", isIdle);
         }
 
         LogCurrentStateIfChanged();
@@ -288,11 +349,9 @@ public class PlayerMovement : MonoBehaviour
 
         proneHoldInProgress = true;
 
-        // Already prone: long hold returns to standing
         if (isProne)
             return;
 
-        // From standing: long hold first enters crouch
         if (!isCrouching)
         {
             isCrouching = true;
@@ -308,7 +367,6 @@ public class PlayerMovement : MonoBehaviour
         proneHoldInProgress = false;
         suppressNextCrouchTap = false;
 
-        // Already prone: long hold returns to standing
         if (isProne)
         {
             isProne = false;
@@ -316,7 +374,6 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // Otherwise go to prone
         isProne = true;
         isCrouching = false;
     }
@@ -328,73 +385,84 @@ public class PlayerMovement : MonoBehaviour
 
     void StartDive(Vector3 moveDirWorld)
     {
-     Vector3 dir = moveDirWorld;
+        Vector3 dir = moveDirWorld;
 
-     if (aimSettings != null)
-          dir = aimSettings.GetRollDirection(moveDirWorld);
+        if (aimSettings != null)
+            dir = aimSettings.GetRollDirection(moveDirWorld);
 
-      dir.y = 0f;
-     if (dir.sqrMagnitude < 0.0001f)
-          dir = transform.forward;
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f)
+            dir = transform.forward;
 
-      dir.Normalize();
+        dir.Normalize();
 
-      diveDirection = dir;
-     diveRemainingDistance = diveDistance;
-     diveTimer = diveDuration;
-     isDiving = true;
-     isProne = false;
-     isCrouching = false;
-     lastDiveTime = Time.time;
+        diveDirection = dir;
+        diveRemainingDistance = diveDistance;
+        diveTimer = diveDuration;
+        isDiving = true;
+        isProne = false;
+        isCrouching = false;
+        isAiming = false;
+        lastDiveTime = Time.time;
 
-     if (animator != null)
-     {
+        if (animator != null)
+        {
             animator.ResetTrigger("DiveTrigger");
             animator.SetTrigger("DiveTrigger");
-         animator.SetBool("IsDiving", true);
+
+            animator.SetBool("IsDiving", true);
+            animator.SetBool("IsProne", false);
+            animator.SetBool("IsCrouching", false);
+            animator.SetBool("IsRunning", false);
+            animator.SetBool("IsWalking", false);
+            animator.SetBool("IsMoving", false);
+            animator.SetBool("IsAiming", false);
+            animator.SetBool("IsIdle", false);
 
             Vector3 localDiveDir = transform.InverseTransformDirection(dir);
-         animator.SetFloat("DiveDirX", localDiveDir.x);
+            animator.SetFloat("DiveDirX", localDiveDir.x);
             animator.SetFloat("DiveDirY", localDiveDir.z);
-     }
+        }
     }
 
     void UpdateDive(float dt)
     {
-      float diveSpeed = diveDistance / Mathf.Max(diveDuration, 0.0001f);
+        float diveSpeed = diveDistance / Mathf.Max(diveDuration, 0.0001f);
 
-       float step = diveSpeed * dt;
-       if (step > diveRemainingDistance)
-           step = diveRemainingDistance;
+        float step = diveSpeed * dt;
+        if (step > diveRemainingDistance)
+            step = diveRemainingDistance;
 
         Vector3 motion = diveDirection * step;
-       diveRemainingDistance -= step;
-       controller.Move(motion);
+        diveRemainingDistance -= step;
+        controller.Move(motion);
 
-      velocity.y += gravity * dt;
-     controller.Move(new Vector3(0f, velocity.y, 0f) * dt);
+        velocity.y += gravity * dt;
+        controller.Move(new Vector3(0f, velocity.y, 0f) * dt);
 
-      if (diveDirection.sqrMagnitude > 0.0001f)
-      {
-          Quaternion targetRot = Quaternion.LookRotation(diveDirection, Vector3.up);
-          transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * dt);
-       }
+        if (diveDirection.sqrMagnitude > 0.0001f)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(diveDirection, Vector3.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * dt);
+        }
 
-       diveTimer -= dt;
+        diveTimer -= dt;
 
-      if (diveTimer <= 0f || diveRemainingDistance <= 0f)
-     {
+        if (diveTimer <= 0f || diveRemainingDistance <= 0f)
+        {
             isDiving = false;
             isProne = false;
             isCrouching = true;
+            isAiming = false;
 
             if (animator != null)
             {
                 animator.SetBool("IsDiving", false);
-               animator.SetBool("IsProne", false);
-             animator.SetBool("IsCrouching", true);
-         }
-     }
+                animator.SetBool("IsProne", false);
+                animator.SetBool("IsCrouching", true);
+                animator.SetBool("IsAiming", false);
+            }
+        }
     }
 
     string GetCurrentStateName()
@@ -404,6 +472,7 @@ public class PlayerMovement : MonoBehaviour
         if (isWalkingState) return "Walking";
         if (isProne) return "Prone";
         if (isCrouching) return "Crouching";
+        if (isAiming) return "Aiming";
         return "Idle";
     }
 
