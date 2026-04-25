@@ -13,13 +13,21 @@ public class PlayerAimSettings : MonoBehaviour
     public Transform cameraTransform;
     public Camera aimCamera;
 
-    [Header("Mouse Aim")]
+    [Header("Crosshair")]
+    public PlayerCrossHairSettings crosshairSettings;
+
+    [Header("Mouse Aim Fallback")]
     public LayerMask mouseAimLayers = ~0;
     public float mouseAimDistance = 100f;
 
     public bool IsAiming { get; private set; }
-    public bool IsAimHeld => aimAction != null && aimAction.IsPressed();
-    public bool AimPressedThisFrame => aimAction != null && aimAction.WasPressedThisFrame();
+    public bool IsAimHeld => aimHeldState;
+    public bool AimPressedThisFrame => aimPressedThisFrameState;
+
+    // Actual input only, without quick shot override
+    public bool IsAimInputHeld => aimAction != null && aimAction.IsPressed();
+    public bool AimInputPressedThisFrame => aimAction != null && aimAction.WasPressedThisFrame();
+
     public Vector2 LookInput { get; private set; }
     public bool UsingMouseScheme { get; private set; }
 
@@ -32,9 +40,26 @@ public class PlayerAimSettings : MonoBehaviour
     private InputAction lookAction;
     private InputAction aimAction;
 
+    private bool externalAimOverride;
+    private bool externalAimPressedPulse;
+    private bool aimHeldState;
+    private bool aimPressedThisFrameState;
+
+    void Reset()
+    {
+        if (crosshairSettings == null)
+            crosshairSettings = GetComponent<PlayerCrossHairSettings>();
+
+        if (crosshairSettings == null)
+            crosshairSettings = FindFirstObjectByType<PlayerCrossHairSettings>();
+    }
+
     void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
+
+        if (crosshairSettings == null)
+            crosshairSettings = GetComponent<PlayerCrossHairSettings>();
     }
 
     void OnEnable()
@@ -51,6 +76,12 @@ public class PlayerAimSettings : MonoBehaviour
     {
         lookAction?.Disable();
         aimAction?.Disable();
+
+        externalAimOverride = false;
+        externalAimPressedPulse = false;
+        aimHeldState = false;
+        aimPressedThisFrameState = false;
+        IsAiming = false;
     }
 
     public float GetMoveSpeed(bool isCrouching, bool isProne, float fallbackSpeed, bool isActuallyAiming)
@@ -61,9 +92,27 @@ public class PlayerAimSettings : MonoBehaviour
         return aimWalkSpeed;
     }
 
+    public void SetExternalAimOverride(bool active)
+    {
+        if (externalAimOverride == active)
+            return;
+
+        externalAimOverride = active;
+
+        if (active)
+            externalAimPressedPulse = true;
+    }
+
     public Vector3 TickAimAndGetFacingDirection(Transform actor, Vector3 moveDirWorld, bool isCrouching)
     {
-        IsAiming = aimAction != null && aimAction.IsPressed();
+        bool inputAimHeld = aimAction != null && aimAction.IsPressed();
+        bool inputAimPressedThisFrame = aimAction != null && aimAction.WasPressedThisFrame();
+
+        aimHeldState = inputAimHeld || externalAimOverride;
+        aimPressedThisFrameState = inputAimPressedThisFrame || externalAimPressedPulse;
+        externalAimPressedPulse = false;
+
+        IsAiming = aimHeldState;
         LookInput = lookAction != null ? lookAction.ReadValue<Vector2>() : Vector2.zero;
 
         UsingMouseScheme = playerInput != null &&
@@ -76,6 +125,31 @@ public class PlayerAimSettings : MonoBehaviour
         HasMouseAimPoint = false;
         MouseAimPoint = Vector3.zero;
 
+        // Drive crosshair system first
+        if (crosshairSettings != null)
+        {
+            crosshairSettings.Tick(
+                actor,
+                isCrouching,
+                IsAiming,
+                LookInput,
+                UsingMouseScheme,
+                aimCamera,
+                cameraTransform
+            );
+
+            AimWorldDir = crosshairSettings.AimWorldDir;
+            AimPointClamped = crosshairSettings.AimPointClamped;
+            HasMouseAimPoint = crosshairSettings.HasMouseAimPoint;
+            MouseAimPoint = crosshairSettings.MouseAimPoint;
+
+            if (IsAiming && AimWorldDir.sqrMagnitude > 0.0001f)
+                return AimWorldDir;
+
+            return moveDirWorld;
+        }
+
+        // Fallback path if no crosshairSettings is assigned
         if (!IsAiming)
             return facingDir;
 

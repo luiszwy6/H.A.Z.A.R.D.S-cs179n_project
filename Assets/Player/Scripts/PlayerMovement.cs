@@ -26,6 +26,8 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("Animation")]
     public float speedDampTime = 0.1f;
+    public float riseSpeed = 2f;
+    public float fallSpeed = 4f;
 
     [Header("Dive Settings")]
     public float diveDistance = 4f;
@@ -51,6 +53,7 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController controller;
     private PlayerInput playerInput;
     private PlayerAimSettings aimSettings;
+    private AssaultRifleAmmoSettings assaultRifleAmmoSettings;
 
     private InputAction moveAction;
     private InputAction runAction;
@@ -92,6 +95,11 @@ public class PlayerMovement : MonoBehaviour
     private bool hasMoveInput;
     private Vector3 desiredFacingDir = Vector3.forward;
 
+    // Smoothed locomotion animator params
+    private float animSpeed;
+    private float animSpeedX;
+    private float animSpeedZ;
+
     // Debug state logging
     private string lastLoggedState = "";
     private bool isWalkingState;
@@ -101,6 +109,15 @@ public class PlayerMovement : MonoBehaviour
     private static readonly int IsSlideHash = Animator.StringToHash("IsSlide");
 
     public bool IsRunningNow => isRunningState;
+    public bool IsDivingNow => isDiving;
+    public bool IsSlidingNow => isSliding;
+    public bool IsRecoveryLockedNow =>
+        Time.time < postDiveLockUntilTime || Time.time < postSlideLockUntilTime;
+
+    public bool CanShootNow =>
+        !isDiving &&
+        !isSliding &&
+        !isRunningState;
 
     void Awake()
     {
@@ -108,6 +125,10 @@ public class PlayerMovement : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         playerInput = GetComponent<PlayerInput>();
         aimSettings = GetComponent<PlayerAimSettings>();
+        if (assaultRifleAmmoSettings == null){
+        assaultRifleAmmoSettings = GetComponentInChildren<AssaultRifleAmmoSettings>(true);
+        }
+        
     }
 
     void Start()
@@ -190,12 +211,18 @@ public class PlayerMovement : MonoBehaviour
 
         Vector2 moveInput = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
         bool runHeld = runAction != null && runAction.IsPressed();
+        bool isReloadingNow = assaultRifleAmmoSettings != null && assaultRifleAmmoSettings.IsReloading;
 
         // Recovery lock and external lock prevent normal movement input
         if (externalMovementLock || recoveryLocked)
         {
             moveInput = Vector2.zero;
             runHeld = false;
+        }
+
+        if (isReloadingNow)
+        {
+        runHeld = false;
         }
 
         Vector3 inputDir = new Vector3(moveInput.x, 0f, moveInput.y);
@@ -405,18 +432,21 @@ public class PlayerMovement : MonoBehaviour
             if (moveDirWorld.sqrMagnitude > 0.0001f)
                 localMove = transform.InverseTransformDirection(moveDirWorld).normalized * inputMagnitude;
 
-            if (!isAiming)
+            float targetSpeed = inputMagnitude;
+            float targetSpeedX = 0f;
+            float targetSpeedZ = 0f;
+
+            if (isAiming)
             {
-                animator.SetFloat("Speed", inputMagnitude, speedDampTime, dt);
-                animator.SetFloat("SpeedX", 0f, speedDampTime, dt);
-                animator.SetFloat("SpeedZ", 0f, speedDampTime, dt);
+                targetSpeedX = localMove.x;
+                targetSpeedZ = localMove.z;
             }
-            else
-            {
-                animator.SetFloat("Speed", inputMagnitude, speedDampTime, dt);
-                animator.SetFloat("SpeedX", localMove.x, speedDampTime, dt);
-                animator.SetFloat("SpeedZ", localMove.z, speedDampTime, dt);
-            }
+
+            UpdateLocomotionParams(targetSpeed, targetSpeedX, targetSpeedZ, dt);
+
+            animator.SetFloat("Speed", animSpeed);
+            animator.SetFloat("SpeedX", animSpeedX);
+            animator.SetFloat("SpeedZ", animSpeedZ);
 
             animator.SetBool("IsMoving", isMoving);
             animator.SetBool("IsCrouching", isCrouching);
@@ -591,6 +621,8 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("IsAiming", false);
             animator.SetBool("IsIdle", false);
 
+            ResetLocomotionParams();
+
             Vector3 localDiveDir = transform.InverseTransformDirection(dir);
             animator.SetFloat("DiveDirX", localDiveDir.x);
             animator.SetFloat("DiveDirY", localDiveDir.z);
@@ -696,9 +728,7 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("IsAiming", true);
             animator.SetBool("IsIdle", false);
 
-            animator.SetFloat("Speed", 0f);
-            animator.SetFloat("SpeedX", 0f);
-            animator.SetFloat("SpeedZ", 0f);
+            ResetLocomotionParams();
         }
     }
 
@@ -738,6 +768,8 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("IsMoving", false);
             animator.SetBool("IsAiming", false);
             animator.SetBool("IsIdle", false);
+
+            ResetLocomotionParams();
         }
     }
 
@@ -821,9 +853,7 @@ public class PlayerMovement : MonoBehaviour
             animator.SetBool("IsWalking", false);
             animator.SetBool("IsRunning", false);
 
-            animator.SetFloat("Speed", 0f);
-            animator.SetFloat("SpeedX", 0f);
-            animator.SetFloat("SpeedZ", 0f);
+            ResetLocomotionParams();
         }
     }
 
@@ -850,6 +880,30 @@ public class PlayerMovement : MonoBehaviour
         else
         {
             postSlideLockUntilTime = -999f;
+        }
+    }
+
+    void UpdateLocomotionParams(float targetSpeed, float targetSpeedX, float targetSpeedZ, float dt)
+    {
+        float rise = riseSpeed * dt;
+        float fall = fallSpeed * dt;
+
+        animSpeed = Mathf.MoveTowards(animSpeed, targetSpeed, targetSpeed > animSpeed ? rise : fall);
+        animSpeedX = Mathf.MoveTowards(animSpeedX, targetSpeedX, Mathf.Abs(targetSpeedX) > Mathf.Abs(animSpeedX) ? rise : fall);
+        animSpeedZ = Mathf.MoveTowards(animSpeedZ, targetSpeedZ, Mathf.Abs(targetSpeedZ) > Mathf.Abs(animSpeedZ) ? rise : fall);
+    }
+
+    void ResetLocomotionParams()
+    {
+        animSpeed = 0f;
+        animSpeedX = 0f;
+        animSpeedZ = 0f;
+
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", 0f);
+            animator.SetFloat("SpeedX", 0f);
+            animator.SetFloat("SpeedZ", 0f);
         }
     }
 

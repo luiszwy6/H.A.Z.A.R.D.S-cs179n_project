@@ -79,6 +79,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Reload",
+                    "type": "Button",
+                    "id": "f21b67ed-f1c7-455e-aeb7-cdb94b547fad",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Change View",
                     "type": "Button",
                     "id": "cc7f965f-8b18-4be1-b00d-0250b2d38214",
@@ -505,6 +514,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Finish",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "0383aab1-fc2e-42da-bbc7-71405c9f1b27",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Reload",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
