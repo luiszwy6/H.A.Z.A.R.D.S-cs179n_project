@@ -4,15 +4,15 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 [DisallowMultipleComponent]
-public class PlayerShootSettings : MonoBehaviour
+public class ARShootSettings : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private MuzzlePointSettings muzzlePointSettings;
+    [SerializeField] private MuzzlePointSettings MuzzlePointSettings;
     [SerializeField] private Animator animator;
-    [SerializeField] private PlayerCrossHairSettings crosshairSettings;
+    [SerializeField] private PlayerCrossHairSettings PlayerCrossHairSettings;
     [SerializeField] private CameraNoiseByMovement cameraNoiseByMovement;
     [SerializeField] private PlayerMovement playerMovement;
-    [SerializeField] private AssaultRifleAmmoSettings assaultRifleAmmoSettings;
+    [SerializeField] private WeaponAmmoSettings WeaponAmmoSettings;
 
     [Header("Weapon SFX/VFX")]
     [SerializeField] private WeaponEffects weaponEffects;
@@ -21,7 +21,11 @@ public class PlayerShootSettings : MonoBehaviour
     [SerializeField] private PlayerAimSettings aimSettings;
     [SerializeField] private bool allowQuickShot = true;
 
-    [Header("Projectile (real logic)")]
+    [Header("Quick Shot Rotation")]
+    [SerializeField] private bool useQuickShotRotationSpeedOverride = true;
+    [Min(0f)] [SerializeField] private float quickShotRotationSpeed = 22f;
+
+    [Header("Projectile - Real Logic")]
     [SerializeField] private BulletProjectile bulletProjectilePrefab;
     [SerializeField] private Transform projectileSpawnOverride;
     [Min(0.01f)] [SerializeField] private float bulletSpeed = 120f;
@@ -30,7 +34,7 @@ public class PlayerShootSettings : MonoBehaviour
     [SerializeField] private LayerMask bulletHitMask = ~0;
     [SerializeField] private QueryTriggerInteraction projectileTriggerInteraction = QueryTriggerInteraction.Collide;
 
-    [Header("Projectile (visual only)")]
+    [Header("Projectile - Visual Only")]
     [SerializeField] private BulletProjectileVisual visualBulletProjectilePrefab;
     [SerializeField] private bool spawnVisualProjectile = true;
     [SerializeField] private Transform visualProjectileSpawnOverride;
@@ -51,10 +55,14 @@ public class PlayerShootSettings : MonoBehaviour
     [SerializeField] private string shootTriggerName = "Shoot";
     [SerializeField] private string quickShotBoolName = "QuickShot";
     [SerializeField] private string isShootingBoolName = "IsShooting";
+
+    [Tooltip("Full-auto state. True while the player is holding fire and the weapon is continuously shooting.")]
+    [SerializeField] private string keepShootingBoolName = "KeepShooting";
+
     [SerializeField] private bool resetTriggerBeforeSet = true;
     [SerializeField] private float isShootingHoldTime = 0.1f;
 
-    [Header("Input (optional)")]
+    [Header("Input")]
     [SerializeField] private PlayerInput playerInput;
     [SerializeField] private string shootActionName = "Shoot";
 
@@ -63,9 +71,12 @@ public class PlayerShootSettings : MonoBehaviour
 
     private InputAction shootAction;
     private float nextShootTime;
+
     private int shootTriggerHash;
     private int quickShotBoolHash;
     private int isShootingBoolHash;
+    private int keepShootingBoolHash;
+
     private Coroutine shootingBoolRoutine;
 
     private bool quickShotSessionActive;
@@ -74,23 +85,60 @@ public class PlayerShootSettings : MonoBehaviour
 
     private void Reset()
     {
-        if (aimSettings == null) aimSettings = GetComponent<PlayerAimSettings>();
-        if (playerMovement == null) playerMovement = GetComponent<PlayerMovement>();
-        if (playerInput == null) playerInput = GetComponent<PlayerInput>();
-        if (animator == null) animator = GetComponentInChildren<Animator>();
-        if (crosshairSettings == null) crosshairSettings = FindFirstObjectByType<PlayerCrossHairSettings>();
-        if (weaponEffects == null) weaponEffects = GetComponentInChildren<WeaponEffects>();
-        if (assaultRifleAmmoSettings == null) assaultRifleAmmoSettings = GetComponent<AssaultRifleAmmoSettings>();
+        Transform root = transform.root;
+
+        if (MuzzlePointSettings == null)
+            MuzzlePointSettings = GetComponent<MuzzlePointSettings>();
+
+        if (PlayerCrossHairSettings == null)
+            PlayerCrossHairSettings = GetComponent<PlayerCrossHairSettings>();
+
+        if (WeaponAmmoSettings == null)
+            WeaponAmmoSettings = GetComponent<WeaponAmmoSettings>();
+
+        if (weaponEffects == null)
+            weaponEffects = GetComponentInChildren<WeaponEffects>();
+
+        if (aimSettings == null)
+            aimSettings = root.GetComponent<PlayerAimSettings>();
+
+        if (playerMovement == null)
+            playerMovement = root.GetComponent<PlayerMovement>();
+
+        if (playerInput == null)
+            playerInput = root.GetComponent<PlayerInput>();
+
+        if (animator == null)
+            animator = root.GetComponentInChildren<Animator>();
     }
 
     private void Awake()
     {
-        if (aimSettings == null) aimSettings = GetComponent<PlayerAimSettings>();
-        if (playerMovement == null) playerMovement = GetComponent<PlayerMovement>();
-        if (playerInput == null) playerInput = GetComponent<PlayerInput>();
-        if (animator == null) animator = GetComponentInChildren<Animator>();
-        if (weaponEffects == null) weaponEffects = GetComponentInChildren<WeaponEffects>();
-        if (assaultRifleAmmoSettings == null) assaultRifleAmmoSettings = GetComponent<AssaultRifleAmmoSettings>();
+        Transform root = transform.root;
+
+        if (MuzzlePointSettings == null)
+            MuzzlePointSettings = GetComponent<MuzzlePointSettings>();
+
+        if (PlayerCrossHairSettings == null)
+            PlayerCrossHairSettings = GetComponent<PlayerCrossHairSettings>();
+
+        if (WeaponAmmoSettings == null)
+            WeaponAmmoSettings = GetComponent<WeaponAmmoSettings>();
+
+        if (weaponEffects == null)
+            weaponEffects = GetComponentInChildren<WeaponEffects>();
+
+        if (aimSettings == null)
+            aimSettings = root.GetComponent<PlayerAimSettings>();
+
+        if (playerMovement == null)
+            playerMovement = root.GetComponent<PlayerMovement>();
+
+        if (playerInput == null)
+            playerInput = root.GetComponent<PlayerInput>();
+
+        if (animator == null)
+            animator = root.GetComponentInChildren<Animator>();
 
         if (playerInput != null && playerInput.actions != null)
             shootAction = playerInput.actions[shootActionName];
@@ -98,74 +146,31 @@ public class PlayerShootSettings : MonoBehaviour
         shootTriggerHash = Animator.StringToHash(shootTriggerName);
         quickShotBoolHash = Animator.StringToHash(quickShotBoolName);
         isShootingBoolHash = Animator.StringToHash(isShootingBoolName);
+        keepShootingBoolHash = Animator.StringToHash(keepShootingBoolName);
+
         nextShootTime = 0f;
     }
 
     private void OnEnable()
     {
-        if (shootAction != null)
-            shootAction.Enable();
-
-        quickShotSessionActive = false;
-        quickShotRequiresRelease = false;
-        wasRealAimHeldLastFrame = false;
-
-        if (aimSettings != null)
-            aimSettings.SetExternalAimOverride(false);
-
-        if (animator != null)
-        {
-            animator.SetBool(isShootingBoolHash, false);
-            animator.SetBool(quickShotBoolHash, false);
-        }
+        ForceClearRuntimeState();
     }
 
     private void OnDisable()
     {
-        if (shootAction != null)
-            shootAction.Disable();
-
         if (shootingBoolRoutine != null)
         {
             StopCoroutine(shootingBoolRoutine);
             shootingBoolRoutine = null;
         }
 
-        quickShotSessionActive = false;
-        quickShotRequiresRelease = false;
-        wasRealAimHeldLastFrame = false;
-
-        if (aimSettings != null)
-            aimSettings.SetExternalAimOverride(false);
-
-        if (animator != null)
-        {
-            animator.SetBool(isShootingBoolHash, false);
-            animator.SetBool(quickShotBoolHash, false);
-        }
+        ForceClearRuntimeState();
     }
 
     private void Update()
     {
         if (shootAction == null)
             return;
-
-        if (assaultRifleAmmoSettings != null && assaultRifleAmmoSettings.IsReloading)
-        {
-            quickShotSessionActive = false;
-            quickShotRequiresRelease = true;
-
-            if (aimSettings != null)
-                aimSettings.SetExternalAimOverride(false);
-
-            if (animator != null)
-            {
-                animator.SetBool(quickShotBoolHash, false);
-                animator.SetBool(isShootingBoolHash, false);
-            }
-
-            return;
-        }
 
         bool shootHeld = shootAction.IsPressed();
         bool shootPressedThisFrame = shootAction.WasPressedThisFrame();
@@ -182,14 +187,14 @@ public class PlayerShootSettings : MonoBehaviour
 
             if (animator != null)
                 animator.SetBool(quickShotBoolHash, false);
+
+            SetAnimatorKeepShootingBool(false);
         }
 
         if (shootPressedThisFrame && !realAimHeldNow && allowQuickShot && !quickShotRequiresRelease)
         {
             quickShotSessionActive = true;
-
-            if (aimSettings != null)
-                aimSettings.SetExternalAimOverride(true);
+            ApplyQuickShotAimOverride();
 
             if (animator != null)
                 animator.SetBool(quickShotBoolHash, true);
@@ -209,26 +214,45 @@ public class PlayerShootSettings : MonoBehaviour
 
         if (!realAimHeldNow && quickShotSessionActive && !quickShotRequiresRelease)
         {
-            if (aimSettings != null)
-                aimSettings.SetExternalAimOverride(true);
+            ApplyQuickShotAimOverride();
 
             if (animator != null)
                 animator.SetBool(quickShotBoolHash, true);
         }
 
-        if (shootHeld)
+        bool canUseAimFire = shootHeld && realAimHeldNow;
+        bool canUseQuickShotFire = shootHeld && quickShotSessionActive && !quickShotRequiresRelease;
+        bool wantsToFire = canUseAimFire || canUseQuickShotFire;
+
+        if (wantsToFire)
         {
-            if (realAimHeldNow)
-            {
-                Shoot();
-            }
-            else if (quickShotSessionActive && !quickShotRequiresRelease)
-            {
-                Shoot();
-            }
+            Shoot();
+        }
+        else
+        {
+            SetAnimatorKeepShootingBool(false);
         }
 
         wasRealAimHeldLastFrame = realAimHeldNow;
+    }
+
+    public void ForceClearRuntimeState()
+    {
+        quickShotSessionActive = false;
+        quickShotRequiresRelease = false;
+        wasRealAimHeldLastFrame = false;
+        externalShootLock = false;
+
+        if (aimSettings != null)
+            aimSettings.SetExternalAimOverride(false);
+
+        if (animator != null)
+        {
+            animator.SetBool(isShootingBoolHash, false);
+            animator.SetBool(quickShotBoolHash, false);
+        }
+
+        SetAnimatorKeepShootingBool(false);
     }
 
     public void Shoot()
@@ -237,15 +261,35 @@ public class PlayerShootSettings : MonoBehaviour
             return;
 
         if (externalShootLock)
+        {
+            StopContinuousShootingState();
             return;
+        }
 
         if (playerMovement != null && !playerMovement.CanShootNow)
-            return;
-
-        if (assaultRifleAmmoSettings != null)
         {
-            if (!assaultRifleAmmoSettings.CanShoot())
-                return;
+            StopContinuousShootingState();
+            return;
+        }
+
+        if (WeaponAmmoSettings != null)
+        {
+            if (WeaponAmmoSettings.IsReloading)
+            {
+                if (!WeaponAmmoSettings.TryCancelReloadForShoot())
+                {
+                    ClearShootStateWhenReloadBlocksShot();
+                    return;
+                }
+            }
+            else
+            {
+                if (!WeaponAmmoSettings.CanShoot())
+                {
+                    StopContinuousShootingState();
+                    return;
+                }
+            }
         }
 
         bool realAimHeldNow = aimSettings != null && aimSettings.IsAimInputHeld;
@@ -253,31 +297,45 @@ public class PlayerShootSettings : MonoBehaviour
         bool isAimingShot = !isQuickShot;
 
         if (isQuickShot && !allowQuickShot)
+        {
+            StopContinuousShootingState();
             return;
+        }
 
         if (isQuickShot)
         {
             if (!quickShotSessionActive || quickShotRequiresRelease)
+            {
+                StopContinuousShootingState();
                 return;
+            }
         }
 
-        if (muzzlePointSettings == null || bulletProjectilePrefab == null)
-            return;
-
-        if (assaultRifleAmmoSettings != null)
+        if (MuzzlePointSettings == null || bulletProjectilePrefab == null)
         {
-            if (!assaultRifleAmmoSettings.TryConsumeOneRound())
-                return;
+            StopContinuousShootingState();
+            return;
         }
+
+        if (WeaponAmmoSettings != null)
+        {
+            if (!WeaponAmmoSettings.TryConsumeOneRound())
+            {
+                StopContinuousShootingState();
+                return;
+            }
+        }
+
+        SetAnimatorKeepShootingBool(true);
 
         nextShootTime = Time.time + Mathf.Max(0f, shootCooldown);
 
-        if (crosshairSettings != null && useRecoil)
+        if (PlayerCrossHairSettings != null && useRecoil)
         {
             if (isAimingShot)
-                crosshairSettings.AddAimShotRecoil();
+                PlayerCrossHairSettings.AddAimShotRecoil();
             else if (isQuickShot)
-                crosshairSettings.AddQuickShotRecoil();
+                PlayerCrossHairSettings.AddQuickShotRecoil();
         }
 
         if (animator != null)
@@ -285,11 +343,7 @@ public class PlayerShootSettings : MonoBehaviour
             if (resetTriggerBeforeSet)
                 animator.ResetTrigger(shootTriggerHash);
 
-            if (isQuickShot)
-                animator.SetBool(quickShotBoolHash, true);
-            else
-                animator.SetBool(quickShotBoolHash, false);
-
+            animator.SetBool(quickShotBoolHash, isQuickShot);
             animator.SetTrigger(shootTriggerHash);
             animator.SetBool(isShootingBoolHash, true);
 
@@ -299,17 +353,17 @@ public class PlayerShootSettings : MonoBehaviour
             shootingBoolRoutine = StartCoroutine(ResetIsShootingAfterDelay());
         }
 
-        muzzlePointSettings.RequestDebugDraw();
+        MuzzlePointSettings.RequestDebugDraw();
 
         Vector3 origin = projectileSpawnOverride != null
             ? projectileSpawnOverride.position
-            : muzzlePointSettings.LastRay.origin;
+            : MuzzlePointSettings.LastRay.origin;
 
         Vector3 targetPoint = ResolveShotTargetPoint(origin, isAimingShot);
 
         Vector3 dir = targetPoint - origin;
         if (dir.sqrMagnitude <= 0.0001f)
-            dir = muzzlePointSettings.LastRay.direction;
+            dir = MuzzlePointSettings.LastRay.direction;
 
         dir.Normalize();
 
@@ -335,10 +389,57 @@ public class PlayerShootSettings : MonoBehaviour
             weaponEffects.PlayGunshot();
     }
 
+    private void ApplyQuickShotAimOverride()
+    {
+        if (aimSettings == null)
+            return;
+
+        if (useQuickShotRotationSpeedOverride)
+            aimSettings.SetExternalAimOverride(true, quickShotRotationSpeed);
+        else
+            aimSettings.SetExternalAimOverride(true);
+    }
+
+    private void StopContinuousShootingState()
+    {
+        SetAnimatorKeepShootingBool(false);
+
+        if (animator != null)
+            animator.SetBool(isShootingBoolHash, false);
+    }
+
+    private void ClearShootStateWhenReloadBlocksShot()
+    {
+        quickShotSessionActive = false;
+        quickShotRequiresRelease = true;
+
+        if (aimSettings != null)
+            aimSettings.SetExternalAimOverride(false);
+
+        if (animator != null)
+        {
+            animator.SetBool(quickShotBoolHash, false);
+            animator.SetBool(isShootingBoolHash, false);
+        }
+
+        SetAnimatorKeepShootingBool(false);
+    }
+
+    private void SetAnimatorKeepShootingBool(bool value)
+    {
+        if (animator == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(keepShootingBoolName))
+            return;
+
+        animator.SetBool(keepShootingBoolHash, value);
+    }
+
     private Vector3 ResolveShotTargetPoint(Vector3 origin, bool isAimingShot)
     {
-        if (isAimingShot && muzzlePointSettings != null)
-            return muzzlePointSettings.AimPoint;
+        if (isAimingShot && MuzzlePointSettings != null)
+            return MuzzlePointSettings.AimPoint;
 
         if (TryGetQuickShotMousePoint(out Vector3 mousePoint))
             return mousePoint;
@@ -351,6 +452,7 @@ public class PlayerShootSettings : MonoBehaviour
         point = Vector3.zero;
 
         Camera cam = null;
+
         if (aimSettings != null && aimSettings.aimCamera != null)
             cam = aimSettings.aimCamera;
         else
@@ -362,33 +464,34 @@ public class PlayerShootSettings : MonoBehaviour
         Vector2 mousePos = Mouse.current.position.ReadValue();
         Ray ray = cam.ScreenPointToRay(mousePos);
 
-        if (crosshairSettings != null)
+        if (PlayerCrossHairSettings != null)
         {
-            if (crosshairSettings.mouseAimLayers.value != 0 &&
+            if (PlayerCrossHairSettings.mouseAimLayers.value != 0 &&
                 Physics.Raycast(
                     ray,
                     out RaycastHit hit,
-                    crosshairSettings.mouseRayMaxDistance,
-                    crosshairSettings.mouseAimLayers,
+                    PlayerCrossHairSettings.mouseRayMaxDistance,
+                    PlayerCrossHairSettings.mouseAimLayers,
                     QueryTriggerInteraction.Ignore))
             {
                 point = hit.point;
                 return true;
             }
 
-            if (crosshairSettings.mouseGroundLayers.value != 0 &&
+            if (PlayerCrossHairSettings.mouseGroundLayers.value != 0 &&
                 Physics.Raycast(
                     ray,
                     out RaycastHit groundHit,
-                    crosshairSettings.mouseRayMaxDistance,
-                    crosshairSettings.mouseGroundLayers,
+                    PlayerCrossHairSettings.mouseRayMaxDistance,
+                    PlayerCrossHairSettings.mouseGroundLayers,
                     QueryTriggerInteraction.Ignore))
             {
                 point = groundHit.point;
+                point.y += PlayerCrossHairSettings.mouseGroundHeightOffset;
                 return true;
             }
 
-            point = ray.origin + ray.direction * crosshairSettings.mouseRayMaxDistance;
+            point = ray.origin + ray.direction * PlayerCrossHairSettings.mouseRayMaxDistance;
             return true;
         }
 
@@ -448,6 +551,7 @@ public class PlayerShootSettings : MonoBehaviour
 
         Vector3 localDir = new Vector3(offset.x, offset.y, 1f).normalized;
         Vector3 spreadDir = basis * localDir;
+
         return spreadDir.normalized;
     }
 
@@ -466,6 +570,7 @@ public class PlayerShootSettings : MonoBehaviour
             visualOrigin = shotRay.origin;
 
         Vector3 targetPoint;
+
         if (Physics.Raycast(
             shotRay,
             out RaycastHit hit,

@@ -3,7 +3,8 @@ using UnityEngine;
 public class ShowAmmo : MonoBehaviour
 {
     [Header("Refs")]
-    [SerializeField] private AssaultRifleAmmoSettings assaultRifleAmmoSettings;
+    [SerializeField] private PlayerWeaponSlots playerWeaponSlots;
+    [SerializeField] private WeaponAmmoSettings fallbackAmmoSettings;
 
     [Header("Display")]
     [SerializeField] private bool showAmmo = true;
@@ -20,8 +21,17 @@ public class ShowAmmo : MonoBehaviour
 
     private void Reset()
     {
-        if (assaultRifleAmmoSettings == null)
-            assaultRifleAmmoSettings = FindFirstObjectByType<AssaultRifleAmmoSettings>();
+        if (playerWeaponSlots == null)
+            playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+
+        if (fallbackAmmoSettings == null)
+            fallbackAmmoSettings = GetComponentInChildren<WeaponAmmoSettings>(true);
+    }
+
+    private void Awake()
+    {
+        if (playerWeaponSlots == null)
+            playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
     }
 
     private void EnsureStyles()
@@ -47,14 +57,19 @@ public class ShowAmmo : MonoBehaviour
 
     private void OnGUI()
     {
-        if (!showAmmo || assaultRifleAmmoSettings == null)
+        if (!showAmmo)
+            return;
+
+        WeaponAmmoSettings ammoSettings = GetCurrentAmmoSettings();
+
+        if (ammoSettings == null)
             return;
 
         EnsureStyles();
 
-        int currentMag = assaultRifleAmmoSettings.CurrentAmmoInMagazine;
-        int magSize = assaultRifleAmmoSettings.MagazineSize;
-        int reserveAmmo = assaultRifleAmmoSettings.CurrentReserveAmmo;
+        int currentMag = ammoSettings.CurrentAmmoInMagazine;
+        int magSize = ammoSettings.MagazineSize;
+        int reserveAmmo = ammoSettings.CurrentReserveAmmo;
 
         Rect boxRect = new Rect(
             offsetFromBottomLeft.x,
@@ -70,5 +85,13 @@ public class ShowAmmo : MonoBehaviour
 
         GUI.Label(titleRect, title, titleStyle);
         GUI.Label(ammoRect, $"{currentMag}/{magSize}   |   {reserveAmmo}", textStyle);
+    }
+
+    private WeaponAmmoSettings GetCurrentAmmoSettings()
+    {
+        if (playerWeaponSlots != null && playerWeaponSlots.CurrentAmmoSettings != null)
+            return playerWeaponSlots.CurrentAmmoSettings;
+
+        return fallbackAmmoSettings;
     }
 }

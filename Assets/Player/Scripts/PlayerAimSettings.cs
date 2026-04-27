@@ -13,8 +13,11 @@ public class PlayerAimSettings : MonoBehaviour
     public Transform cameraTransform;
     public Camera aimCamera;
 
-    [Header("Crosshair")]
-    public PlayerCrossHairSettings crosshairSettings;
+    [Header("Weapon Slots")]
+    [SerializeField] private PlayerWeaponSlots playerWeaponSlots;
+
+    [Header("Crosshair Fallback")]
+    [SerializeField] private PlayerCrossHairSettings fallbackPlayerCrossHairSettings;
 
     [Header("Mouse Aim Fallback")]
     public LayerMask mouseAimLayers = ~0;
@@ -24,7 +27,6 @@ public class PlayerAimSettings : MonoBehaviour
     public bool IsAimHeld => aimHeldState;
     public bool AimPressedThisFrame => aimPressedThisFrameState;
 
-    // Actual input only, without quick shot override
     public bool IsAimInputHeld => aimAction != null && aimAction.IsPressed();
     public bool AimInputPressedThisFrame => aimAction != null && aimAction.WasPressedThisFrame();
 
@@ -45,34 +47,42 @@ public class PlayerAimSettings : MonoBehaviour
     private bool aimHeldState;
     private bool aimPressedThisFrameState;
 
-    void Reset()
-    {
-        if (crosshairSettings == null)
-            crosshairSettings = GetComponent<PlayerCrossHairSettings>();
+    private bool externalAimRotationSpeedOverrideActive;
+    private float externalAimRotationSpeedOverride;
 
-        if (crosshairSettings == null)
-            crosshairSettings = FindFirstObjectByType<PlayerCrossHairSettings>();
+    private void Reset()
+    {
+        if (playerWeaponSlots == null)
+            playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+
+        if (fallbackPlayerCrossHairSettings == null)
+            fallbackPlayerCrossHairSettings = GetComponentInChildren<PlayerCrossHairSettings>(true);
     }
 
-    void Awake()
+    private void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
 
-        if (crosshairSettings == null)
-            crosshairSettings = GetComponent<PlayerCrossHairSettings>();
+        if (playerWeaponSlots == null)
+            playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        var actions = playerInput.actions;
-        lookAction = actions["Look"];
-        aimAction = actions["Aim"];
+        if (playerInput == null)
+            playerInput = GetComponent<PlayerInput>();
+
+        if (playerInput != null && playerInput.actions != null)
+        {
+            lookAction = playerInput.actions["Look"];
+            aimAction = playerInput.actions["Aim"];
+        }
 
         lookAction?.Enable();
         aimAction?.Enable();
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         lookAction?.Disable();
         aimAction?.Disable();
@@ -82,25 +92,68 @@ public class PlayerAimSettings : MonoBehaviour
         aimHeldState = false;
         aimPressedThisFrameState = false;
         IsAiming = false;
+
+        externalAimRotationSpeedOverrideActive = false;
+        externalAimRotationSpeedOverride = 0f;
     }
 
     public float GetMoveSpeed(bool isCrouching, bool isProne, float fallbackSpeed, bool isActuallyAiming)
     {
-        if (!isActuallyAiming) return fallbackSpeed;
-        if (isProne) return aimProneSpeed;
-        if (isCrouching) return aimCrouchSpeed;
+        if (!isActuallyAiming)
+            return fallbackSpeed;
+
+        if (isProne)
+            return aimProneSpeed;
+
+        if (isCrouching)
+            return aimCrouchSpeed;
+
         return aimWalkSpeed;
     }
 
     public void SetExternalAimOverride(bool active)
     {
-        if (externalAimOverride == active)
-            return;
+        SetExternalAimOverride(active, false, 0f);
+    }
+
+    public void SetExternalAimOverride(bool active, float rotationSpeedOverride)
+    {
+        SetExternalAimOverride(active, true, rotationSpeedOverride);
+    }
+
+    private void SetExternalAimOverride(bool active, bool useRotationSpeedOverride, float rotationSpeedOverride)
+    {
+        bool wasActive = externalAimOverride;
 
         externalAimOverride = active;
 
-        if (active)
+        if (active && !wasActive)
             externalAimPressedPulse = true;
+
+        if (active)
+        {
+            if (useRotationSpeedOverride)
+            {
+                externalAimRotationSpeedOverrideActive = true;
+                externalAimRotationSpeedOverride = Mathf.Max(0f, rotationSpeedOverride);
+            }
+            else
+            {
+                externalAimRotationSpeedOverrideActive = false;
+                externalAimRotationSpeedOverride = 0f;
+            }
+        }
+        else
+        {
+            externalAimRotationSpeedOverrideActive = false;
+            externalAimRotationSpeedOverride = 0f;
+        }
+    }
+
+    public bool TryGetExternalAimRotationSpeedOverride(out float rotationSpeed)
+    {
+        rotationSpeed = externalAimRotationSpeedOverride;
+        return externalAimOverride && externalAimRotationSpeedOverrideActive;
     }
 
     public Vector3 TickAimAndGetFacingDirection(Transform actor, Vector3 moveDirWorld, bool isCrouching)
@@ -113,6 +166,7 @@ public class PlayerAimSettings : MonoBehaviour
         externalAimPressedPulse = false;
 
         IsAiming = aimHeldState;
+
         LookInput = lookAction != null ? lookAction.ReadValue<Vector2>() : Vector2.zero;
 
         UsingMouseScheme = playerInput != null &&
@@ -125,10 +179,11 @@ public class PlayerAimSettings : MonoBehaviour
         HasMouseAimPoint = false;
         MouseAimPoint = Vector3.zero;
 
-        // Drive crosshair system first
-        if (crosshairSettings != null)
+        PlayerCrossHairSettings activeCrosshairSettings = GetActiveCrosshairSettings();
+
+        if (activeCrosshairSettings != null)
         {
-            crosshairSettings.Tick(
+            activeCrosshairSettings.Tick(
                 actor,
                 isCrouching,
                 IsAiming,
@@ -138,10 +193,10 @@ public class PlayerAimSettings : MonoBehaviour
                 cameraTransform
             );
 
-            AimWorldDir = crosshairSettings.AimWorldDir;
-            AimPointClamped = crosshairSettings.AimPointClamped;
-            HasMouseAimPoint = crosshairSettings.HasMouseAimPoint;
-            MouseAimPoint = crosshairSettings.MouseAimPoint;
+            AimWorldDir = activeCrosshairSettings.AimWorldDir;
+            AimPointClamped = activeCrosshairSettings.AimPointClamped;
+            HasMouseAimPoint = activeCrosshairSettings.HasMouseAimPoint;
+            MouseAimPoint = activeCrosshairSettings.MouseAimPoint;
 
             if (IsAiming && AimWorldDir.sqrMagnitude > 0.0001f)
                 return AimWorldDir;
@@ -149,25 +204,22 @@ public class PlayerAimSettings : MonoBehaviour
             return moveDirWorld;
         }
 
-        // Fallback path if no crosshairSettings is assigned
         if (!IsAiming)
             return facingDir;
 
         if (UsingMouseScheme)
-        {
             facingDir = GetMouseAimDirection(actor, moveDirWorld);
-        }
         else
-        {
             facingDir = GetStickAimDirection(actor, moveDirWorld);
-        }
 
         if (facingDir.sqrMagnitude > 0.0001f)
         {
             facingDir.y = 0f;
             facingDir.Normalize();
+
             AimWorldDir = facingDir;
             AimPointClamped = actor.position + facingDir * 3f;
+
             return facingDir;
         }
 
@@ -184,10 +236,19 @@ public class PlayerAimSettings : MonoBehaviour
 
         Vector3 f = transform.forward;
         f.y = 0f;
+
         return f.sqrMagnitude > 0.001f ? f.normalized : Vector3.forward;
     }
 
-    Vector3 GetStickAimDirection(Transform actor, Vector3 moveDirWorld)
+    private PlayerCrossHairSettings GetActiveCrosshairSettings()
+    {
+        if (playerWeaponSlots != null && playerWeaponSlots.CurrentCrossHairSettings != null)
+            return playerWeaponSlots.CurrentCrossHairSettings;
+
+        return fallbackPlayerCrossHairSettings;
+    }
+
+    private Vector3 GetStickAimDirection(Transform actor, Vector3 moveDirWorld)
     {
         if (LookInput.sqrMagnitude < 0.0001f)
         {
@@ -210,6 +271,7 @@ public class PlayerAimSettings : MonoBehaviour
 
         camForward.y = 0f;
         camRight.y = 0f;
+
         camForward.Normalize();
         camRight.Normalize();
 
@@ -219,7 +281,7 @@ public class PlayerAimSettings : MonoBehaviour
         return dirWorld.sqrMagnitude > 0.0001f ? dirWorld.normalized : actor.forward;
     }
 
-    Vector3 GetMouseAimDirection(Transform actor, Vector3 moveDirWorld)
+    private Vector3 GetMouseAimDirection(Transform actor, Vector3 moveDirWorld)
     {
         if (aimCamera == null)
         {
@@ -227,6 +289,7 @@ public class PlayerAimSettings : MonoBehaviour
             {
                 Vector3 f = cameraTransform.forward;
                 f.y = 0f;
+
                 return f.sqrMagnitude > 0.0001f ? f.normalized : actor.forward;
             }
 
@@ -247,6 +310,7 @@ public class PlayerAimSettings : MonoBehaviour
         else
         {
             Plane groundPlane = new Plane(Vector3.up, actor.position);
+
             if (groundPlane.Raycast(ray, out float enter))
             {
                 MouseAimPoint = ray.GetPoint(enter);
@@ -272,6 +336,7 @@ public class PlayerAimSettings : MonoBehaviour
 
         Vector3 fallback = actor.forward;
         fallback.y = 0f;
+
         return fallback.normalized;
     }
 }

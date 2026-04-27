@@ -5,118 +5,163 @@ public class MuzzlePointSettings : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Transform muzzlePoint;
-    [SerializeField] private PlayerCrossHairSettings crosshairSettings;
+    [SerializeField] private PlayerAimSettings aimSettings;
+    [SerializeField] private PlayerCrossHairSettings PlayerCrossHairSettings;
 
-    [Header("Raycast (Bullet Trajectory Debug)")]
-    [SerializeField] private LayerMask hitLayers = ~0;
-    [Min(0.01f)] [SerializeField] private float rangeOfProjectile = 50f;
-    [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
+    [Header("Fallback")]
+    [SerializeField] private Transform fallbackForwardSource;
+    [Min(0.01f)] [SerializeField] private float fallbackDistance = 50f;
 
-    [Header("Debug Draw")]
-    [Min(0.01f)] [SerializeField] private float debugDrawDuration = 0.35f;
-    [Min(0.0001f)] [SerializeField] private float gizmoSphereRadius = 0.06f;
-    [SerializeField] private Color bulletRayColor = Color.red;
-    [SerializeField] private Color aimPointColor = Color.yellow;
-    [SerializeField] private bool drawInGameView = true;
-    [SerializeField] private bool drawInSceneGizmos = true;
+    [Header("Debug")]
+    [SerializeField] private bool drawDebugRay = true;
+    [SerializeField] private float debugDrawDuration = 0.08f;
+    [SerializeField] private Color debugRayColor = Color.red;
 
-    public bool HasHit { get; private set; }
-    public RaycastHit LastHit { get; private set; }
+    [Header("Gizmos")]
+    [SerializeField] private bool drawGizmos = true;
+    [SerializeField] private bool drawOnlyWhenSelected = false;
+    [SerializeField] private Color gizmoRayColor = Color.red;
+    [SerializeField] private Color gizmoAimPointColor = Color.yellow;
+    [SerializeField] private float gizmoAimPointRadius = 0.08f;
+
+    private bool debugDrawRequested;
+    private float debugDrawTimer;
+
     public Vector3 AimPoint { get; private set; }
     public Ray LastRay { get; private set; }
 
-    private float _debugTimer;
-
     private void Reset()
     {
-        if (muzzlePoint == null) muzzlePoint = transform;
+        Transform root = transform.root;
+
+        if (muzzlePoint == null)
+            muzzlePoint = transform;
+
+        if (aimSettings == null)
+            aimSettings = root.GetComponent<PlayerAimSettings>();
+
+        if (PlayerCrossHairSettings == null)
+            PlayerCrossHairSettings = GetComponent<PlayerCrossHairSettings>();
+
+        if (fallbackForwardSource == null)
+            fallbackForwardSource = root;
     }
 
-    private void Update()
+    private void Awake()
     {
-        if (_debugTimer > 0f)
-        {
-            _debugTimer -= Time.deltaTime;
+        Transform root = transform.root;
 
-            if (drawInGameView)
-                DrawDebugLineGame();
+        if (muzzlePoint == null)
+            muzzlePoint = transform;
+
+        if (aimSettings == null)
+            aimSettings = root.GetComponent<PlayerAimSettings>();
+
+        if (PlayerCrossHairSettings == null)
+            PlayerCrossHairSettings = GetComponent<PlayerCrossHairSettings>();
+
+        if (fallbackForwardSource == null)
+            fallbackForwardSource = root;
+
+        UpdateMuzzleRay();
+    }
+
+    private void LateUpdate()
+    {
+        UpdateMuzzleRay();
+
+        if (debugDrawRequested)
+        {
+            debugDrawTimer -= Time.deltaTime;
+
+            if (drawDebugRay)
+                Debug.DrawRay(LastRay.origin, LastRay.direction * fallbackDistance, debugRayColor, 0f, false);
+
+            if (debugDrawTimer <= 0f)
+                debugDrawRequested = false;
         }
     }
 
     public void RequestDebugDraw()
     {
-        ComputeShotRaycast();
-        _debugTimer = debugDrawDuration;
-
-        if (drawInGameView)
-            DrawDebugLineGame();
+        debugDrawRequested = true;
+        debugDrawTimer = Mathf.Max(0.01f, debugDrawDuration);
     }
 
-    private void ComputeShotRaycast()
+    private void UpdateMuzzleRay()
     {
-        HasHit = false;
-        LastHit = default;
+        Vector3 origin = muzzlePoint != null ? muzzlePoint.position : transform.position;
 
-        if (muzzlePoint == null)
-            return;
+        Vector3 targetPoint = ResolveAimPoint(origin);
 
-        AimPoint = ResolveAimPoint();
+        Vector3 dir = targetPoint - origin;
 
-        Vector3 origin = muzzlePoint.position;
-        Vector3 toAim = AimPoint - origin;
-        Vector3 dir = toAim.sqrMagnitude > 0.0001f ? toAim.normalized : muzzlePoint.forward;
+        if (dir.sqrMagnitude <= 0.0001f)
+            dir = GetFallbackForward();
 
+        dir.Normalize();
+
+        AimPoint = targetPoint;
         LastRay = new Ray(origin, dir);
+    }
 
-        if (Physics.Raycast(LastRay, out RaycastHit hit, rangeOfProjectile, hitLayers, triggerInteraction))
+    private Vector3 ResolveAimPoint(Vector3 origin)
+    {
+        if (aimSettings != null && aimSettings.IsAiming)
         {
-            HasHit = true;
-            LastHit = hit;
+            if (PlayerCrossHairSettings != null)
+                return PlayerCrossHairSettings.AimPointClamped;
+
+            return aimSettings.AimPointClamped;
         }
+
+        return origin + GetFallbackForward() * fallbackDistance;
     }
 
-    private Vector3 ResolveAimPoint()
+    private Vector3 GetFallbackForward()
     {
-        if (crosshairSettings != null)
-            return crosshairSettings.AimPointClamped;
+        Transform source = fallbackForwardSource != null ? fallbackForwardSource : transform;
 
-        if (muzzlePoint != null)
-            return muzzlePoint.position + muzzlePoint.forward * rangeOfProjectile;
+        Vector3 forward = source.forward;
 
-        return Vector3.zero;
-    }
+        if (forward.sqrMagnitude <= 0.0001f)
+            forward = Vector3.forward;
 
-    private void DrawDebugLineGame()
-    {
-        Vector3 a = LastRay.origin;
-        Vector3 b = HasHit ? LastHit.point : AimPoint;
-
-        Debug.DrawLine(a, b, bulletRayColor, 0f, false);
-        Debug.DrawLine(AimPoint, AimPoint + Vector3.up * 0.15f, aimPointColor, 0f, false);
+        return forward.normalized;
     }
 
     private void OnDrawGizmos()
     {
-        if (!drawInSceneGizmos) return;
-
-        if (!Application.isPlaying)
-            ComputeShotRaycast();
-
-        if (Application.isPlaying && _debugTimer <= 0f)
+        if (!drawGizmos || drawOnlyWhenSelected)
             return;
 
-        Gizmos.color = bulletRayColor;
-
-        Vector3 a = LastRay.origin;
-        Vector3 b = HasHit ? LastHit.point : AimPoint;
-
-        Gizmos.DrawLine(a, b);
-        Gizmos.DrawWireSphere(b, gizmoSphereRadius);
-
-        Gizmos.color = aimPointColor;
-        Gizmos.DrawWireSphere(AimPoint, gizmoSphereRadius * 0.9f);
+        DrawMuzzleGizmos();
     }
 
-    public void SetMuzzle(Transform t) => muzzlePoint = t;
-    public void SetCrosshairSettings(PlayerCrossHairSettings s) => crosshairSettings = s;
+    private void OnDrawGizmosSelected()
+    {
+        if (!drawGizmos || !drawOnlyWhenSelected)
+            return;
+
+        DrawMuzzleGizmos();
+    }
+
+    private void DrawMuzzleGizmos()
+    {
+        Vector3 origin = muzzlePoint != null ? muzzlePoint.position : transform.position;
+
+        Ray rayToDraw = Application.isPlaying
+            ? LastRay
+            : new Ray(origin, transform.forward);
+
+        Vector3 aimPointToDraw = Application.isPlaying
+            ? AimPoint
+            : origin + transform.forward * fallbackDistance;
+
+        Gizmos.color = gizmoRayColor;
+        Gizmos.DrawLine(rayToDraw.origin, aimPointToDraw);
+
+        Gizmos.color = gizmoAimPointColor;
+        Gizmos.DrawWireSphere(aimPointToDraw, gizmoAimPointRadius);
+    }
 }

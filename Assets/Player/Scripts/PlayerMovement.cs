@@ -53,7 +53,9 @@ public class PlayerMovement : MonoBehaviour
     private CharacterController controller;
     private PlayerInput playerInput;
     private PlayerAimSettings aimSettings;
-    private AssaultRifleAmmoSettings assaultRifleAmmoSettings;
+
+    private PlayerWeaponSlots playerWeaponSlots;
+    private WeaponAmmoSettings fallbackWeaponAmmoSettings;
 
     private InputAction moveAction;
     private InputAction runAction;
@@ -67,7 +69,6 @@ public class PlayerMovement : MonoBehaviour
     private bool isProne;
     private bool isAiming;
 
-    // Dive state
     private bool isDiving;
     private float diveTimer;
     private float diveRemainingDistance;
@@ -75,7 +76,6 @@ public class PlayerMovement : MonoBehaviour
     private float lastDiveTime = -999f;
     private float postDiveLockUntilTime = -999f;
 
-    // Slide state
     private bool isSliding;
     private float slideTimer;
     private Vector3 slideDirection;
@@ -84,23 +84,18 @@ public class PlayerMovement : MonoBehaviour
     private float lastSlideTime = -999f;
     private float postSlideLockUntilTime = -999f;
 
-    // Prone input helpers
     private bool proneHoldInProgress;
     private bool suppressNextCrouchTap;
 
-    // Used to decide which wins when Aim and Run are both held
     private bool preferAimWhenBothHeld = true;
 
-    // Cached locomotion data for root motion
     private bool hasMoveInput;
     private Vector3 desiredFacingDir = Vector3.forward;
 
-    // Smoothed locomotion animator params
     private float animSpeed;
     private float animSpeedX;
     private float animSpeedZ;
 
-    // Debug state logging
     private string lastLoggedState = "";
     private bool isWalkingState;
     private bool isRunningState;
@@ -111,6 +106,7 @@ public class PlayerMovement : MonoBehaviour
     public bool IsRunningNow => isRunningState;
     public bool IsDivingNow => isDiving;
     public bool IsSlidingNow => isSliding;
+
     public bool IsRecoveryLockedNow =>
         Time.time < postDiveLockUntilTime || Time.time < postSlideLockUntilTime;
 
@@ -125,10 +121,10 @@ public class PlayerMovement : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         playerInput = GetComponent<PlayerInput>();
         aimSettings = GetComponent<PlayerAimSettings>();
-        if (assaultRifleAmmoSettings == null){
-        assaultRifleAmmoSettings = GetComponentInChildren<AssaultRifleAmmoSettings>(true);
-        }
-        
+        playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+
+        if (fallbackWeaponAmmoSettings == null)
+            fallbackWeaponAmmoSettings = GetComponentInChildren<WeaponAmmoSettings>(true);
     }
 
     void Start()
@@ -138,6 +134,12 @@ public class PlayerMovement : MonoBehaviour
 
     void OnEnable()
     {
+        if (playerInput == null)
+            playerInput = GetComponent<PlayerInput>();
+
+        if (playerInput == null || playerInput.actions == null)
+            return;
+
         var actions = playerInput.actions;
 
         moveAction = actions["Move"];
@@ -180,12 +182,10 @@ public class PlayerMovement : MonoBehaviour
     {
         float dt = Time.deltaTime;
 
-        // Keep the controller grounded with a small downward force
         isGrounded = controller.isGrounded;
         if (isGrounded && velocity.y < 0f)
             velocity.y = -0.5f;
 
-        // While diving, only dive logic runs
         if (isDiving)
         {
             isWalkingState = false;
@@ -195,7 +195,6 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        // While sliding, only slide logic runs
         if (isSliding)
         {
             isWalkingState = false;
@@ -211,9 +210,10 @@ public class PlayerMovement : MonoBehaviour
 
         Vector2 moveInput = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
         bool runHeld = runAction != null && runAction.IsPressed();
-        bool isReloadingNow = assaultRifleAmmoSettings != null && assaultRifleAmmoSettings.IsReloading;
 
-        // Recovery lock and external lock prevent normal movement input
+        WeaponAmmoSettings currentAmmoSettings = GetCurrentAmmoSettings();
+        bool isReloadingNow = currentAmmoSettings != null && currentAmmoSettings.IsReloading;
+
         if (externalMovementLock || recoveryLocked)
         {
             moveInput = Vector2.zero;
@@ -221,9 +221,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (isReloadingNow)
-        {
-        runHeld = false;
-        }
+            runHeld = false;
 
         Vector3 inputDir = new Vector3(moveInput.x, 0f, moveInput.y);
         float inputMagnitude = Mathf.Clamp01(inputDir.magnitude);
@@ -235,7 +233,6 @@ public class PlayerMovement : MonoBehaviour
         else
             inputDir = Vector3.zero;
 
-        // Convert input to camera-relative world movement
         Vector3 moveDirWorld = inputDir;
         if (cameraTransform != null && wantsToMove)
         {
@@ -260,7 +257,6 @@ public class PlayerMovement : MonoBehaviour
 
         bool canDive = Time.time >= lastDiveTime + diveCooldown;
 
-        // Start Dive immediately if conditions are valid
         if (divePressed && isGrounded && !isDiving && !isSliding && !isProne && canDive)
         {
             StartDive(moveDirWorld);
@@ -286,7 +282,6 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 facingDir = moveDirWorld;
 
-        // Aim settings provides aim input state and aim-facing direction
         if (aimSettings != null)
         {
             facingDir = aimSettings.TickAimAndGetFacingDirection(
@@ -299,7 +294,6 @@ public class PlayerMovement : MonoBehaviour
             aimPressedThisFrame = aimSettings.AimPressedThisFrame;
         }
 
-        // Slide can only start from movement-state conditions, not animator state
         bool canSlideNow = !externalMovementLock &&
                            !recoveryLocked &&
                            isGrounded &&
@@ -311,7 +305,6 @@ public class PlayerMovement : MonoBehaviour
                            !rawAimHeld &&
                            Time.time >= lastSlideTime + slideCooldown;
 
-        // Running + crouch/prone input becomes Slide instead of stance change
         if (canSlideNow)
         {
             if (proneAction != null && proneAction.WasPerformedThisFrame())
@@ -331,7 +324,6 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // Normal crouch toggle only happens when Slide did not consume the input
         if (crouchAction != null &&
             crouchAction.WasPerformedThisFrame() &&
             isGrounded &&
@@ -354,7 +346,6 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        // New Aim press gets top priority over Run
         if (aimPressedThisFrame)
             preferAimWhenBothHeld = true;
         else if (runPressedThisFrame)
@@ -363,7 +354,6 @@ public class PlayerMovement : MonoBehaviour
         bool wantsToRun = false;
         isAiming = false;
 
-        // Aim and Run arbitration
         if (aimPressedThisFrame && rawAimHeld)
         {
             isAiming = true;
@@ -398,7 +388,6 @@ public class PlayerMovement : MonoBehaviour
             wantsToRun = false;
         }
 
-        // Running always forces standing posture
         if (wantsToRun)
         {
             isCrouching = false;
@@ -412,8 +401,16 @@ public class PlayerMovement : MonoBehaviour
 
         if (!useRootMotionRotation && desiredFacingDir.sqrMagnitude > 0.0001f)
         {
+            float activeRotationSpeed = rotationSpeed;
+
+            if (aimSettings != null &&
+                aimSettings.TryGetExternalAimRotationSpeedOverride(out float overrideRotationSpeed))
+            {
+                activeRotationSpeed = overrideRotationSpeed;
+            }
+
             Quaternion targetRot = Quaternion.LookRotation(desiredFacingDir, Vector3.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * dt);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, activeRotationSpeed * dt);
         }
 
         velocity.y += gravity * dt;
@@ -479,7 +476,6 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 delta = Vector3.zero;
 
-        // Normal locomotion root motion only runs when not in special actions
         if (useRootMotionLocomotion && hasMoveInput && !externalMovementLock && !recoveryLocked)
         {
             delta = animator.deltaPosition * rootMotionScale;
@@ -494,9 +490,7 @@ public class PlayerMovement : MonoBehaviour
             velocity.y = -0.5f;
 
         if (useRootMotionRotation)
-        {
             transform.rotation *= animator.deltaRotation;
-        }
     }
 
     void OnProneStarted(InputAction.CallbackContext ctx)
@@ -504,7 +498,6 @@ public class PlayerMovement : MonoBehaviour
         if (!isGrounded || isDiving || isSliding)
             return;
 
-        // If current input would start Slide, do not enter prone-hold preparation
         if (CanStartSlideFromCurrentInput())
             return;
 
@@ -547,6 +540,14 @@ public class PlayerMovement : MonoBehaviour
         proneHoldInProgress = false;
     }
 
+    WeaponAmmoSettings GetCurrentAmmoSettings()
+    {
+        if (playerWeaponSlots != null && playerWeaponSlots.CurrentAmmoSettings != null)
+            return playerWeaponSlots.CurrentAmmoSettings;
+
+        return fallbackWeaponAmmoSettings;
+    }
+
     bool CanStartSlideFromCurrentInput()
     {
         if (moveAction == null || runAction == null)
@@ -575,20 +576,9 @@ public class PlayerMovement : MonoBehaviour
         return runHeld && wantsToMove;
     }
 
-    // Enter Dive
     void StartDive(Vector3 moveDirWorld)
     {
-        Vector3 dir;
-
-        if (moveDirWorld.sqrMagnitude > 0.0001f)
-        {
-            dir = moveDirWorld;
-        }
-        else
-        {
-            dir = transform.forward;
-        }
-
+        Vector3 dir = moveDirWorld.sqrMagnitude > 0.0001f ? moveDirWorld : transform.forward;
         dir.y = 0f;
 
         if (dir.sqrMagnitude < 0.0001f)
@@ -631,7 +621,6 @@ public class PlayerMovement : MonoBehaviour
 
     void UpdateDive(float dt)
     {
-        // Dive can only be canceled by a new Aim press during Dive
         if (allowAimCancelDive && aimSettings != null && aimSettings.AimPressedThisFrame)
         {
             CancelDiveIntoAim();
@@ -677,7 +666,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // Dive -> Aim cancel
     void CancelDiveIntoAim()
     {
         isDiving = false;
@@ -713,9 +701,7 @@ public class PlayerMovement : MonoBehaviour
         desiredFacingDir = aimFacingDir;
 
         if (!useRootMotionRotation && desiredFacingDir.sqrMagnitude > 0.0001f)
-        {
             transform.rotation = Quaternion.LookRotation(desiredFacingDir, Vector3.up);
-        }
 
         if (animator != null)
         {
@@ -732,7 +718,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // Enter Slide
     void StartSlide(Vector3 moveDirWorld, bool useProneSlide)
     {
         isSliding = true;
@@ -748,8 +733,10 @@ public class PlayerMovement : MonoBehaviour
 
         slideDirection = moveDirWorld.sqrMagnitude > 0.0001f ? moveDirWorld : transform.forward;
         slideDirection.y = 0f;
+
         if (slideDirection.sqrMagnitude < 0.0001f)
             slideDirection = transform.forward;
+
         slideDirection.Normalize();
 
         externalMovementLock = true;
@@ -775,7 +762,6 @@ public class PlayerMovement : MonoBehaviour
 
     void UpdateSlide(float dt)
     {
-        // Slide can only be canceled by a new Aim press during Slide
         if (allowAimCancelSlide && aimSettings != null && aimSettings.AimPressedThisFrame)
         {
             CancelSlideIntoAim();
@@ -801,12 +787,9 @@ public class PlayerMovement : MonoBehaviour
         slideTimer -= dt;
 
         if (slideTimer <= 0f)
-        {
             EndSlide(applyRecoveryLock: true);
-        }
     }
 
-    // Slide -> Aim cancel
     void CancelSlideIntoAim()
     {
         isSliding = false;
@@ -840,9 +823,7 @@ public class PlayerMovement : MonoBehaviour
         desiredFacingDir = aimFacingDir;
 
         if (!useRootMotionRotation && desiredFacingDir.sqrMagnitude > 0.0001f)
-        {
             transform.rotation = Quaternion.LookRotation(desiredFacingDir, Vector3.up);
-        }
 
         if (animator != null)
         {
@@ -857,7 +838,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    // Slide ends in crouch, then enters recovery lock
     void EndSlide(bool applyRecoveryLock)
     {
         isSliding = false;
@@ -874,13 +854,9 @@ public class PlayerMovement : MonoBehaviour
         }
 
         if (applyRecoveryLock)
-        {
             postSlideLockUntilTime = Time.time + slideRecoveryLockDuration;
-        }
         else
-        {
             postSlideLockUntilTime = -999f;
-        }
     }
 
     void UpdateLocomotionParams(float targetSpeed, float targetSpeedX, float targetSpeedZ, float dt)
@@ -888,9 +864,23 @@ public class PlayerMovement : MonoBehaviour
         float rise = riseSpeed * dt;
         float fall = fallSpeed * dt;
 
-        animSpeed = Mathf.MoveTowards(animSpeed, targetSpeed, targetSpeed > animSpeed ? rise : fall);
-        animSpeedX = Mathf.MoveTowards(animSpeedX, targetSpeedX, Mathf.Abs(targetSpeedX) > Mathf.Abs(animSpeedX) ? rise : fall);
-        animSpeedZ = Mathf.MoveTowards(animSpeedZ, targetSpeedZ, Mathf.Abs(targetSpeedZ) > Mathf.Abs(animSpeedZ) ? rise : fall);
+        animSpeed = Mathf.MoveTowards(
+            animSpeed,
+            targetSpeed,
+            targetSpeed > animSpeed ? rise : fall
+        );
+
+        animSpeedX = Mathf.MoveTowards(
+            animSpeedX,
+            targetSpeedX,
+            Mathf.Abs(targetSpeedX) > Mathf.Abs(animSpeedX) ? rise : fall
+        );
+
+        animSpeedZ = Mathf.MoveTowards(
+            animSpeedZ,
+            targetSpeedZ,
+            Mathf.Abs(targetSpeedZ) > Mathf.Abs(animSpeedZ) ? rise : fall
+        );
     }
 
     void ResetLocomotionParams()
