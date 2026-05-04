@@ -223,14 +223,14 @@ public class WeaponAmmoSettings : MonoBehaviour
         SetAnimatorKeepReloadingBool(false);
     }
 
-    private IEnumerator MagazineReloadRoutine()
+private IEnumerator MagazineReloadRoutine()
     {
         BeginReloadProcess(keepReloadingInAnimator: false);
 
         SetAnimatorReloadingBool(true);
         PlayReloadAnimationTrigger();
 
-        yield return new WaitForSeconds(magazineReloadDuration);
+        yield return new WaitForSecondsRealtime(magazineReloadDuration);
 
         int need = Mathf.Max(0, magazineSize - currentAmmoInMagazine);
         int loaded = totalAmmoSetter != null ? totalAmmoSetter.ConsumeAmmo(ammoType, need) : 0;
@@ -242,7 +242,7 @@ public class WeaponAmmoSettings : MonoBehaviour
         reloadRoutine = null;
     }
 
-    private IEnumerator OneByOneReloadRoutine()
+private IEnumerator OneByOneReloadRoutine()
     {
         BeginReloadProcess(keepReloadingInAnimator: true);
 
@@ -256,7 +256,7 @@ public class WeaponAmmoSettings : MonoBehaviour
             SetAnimatorReloadingBool(true);
             PlayReloadAnimationTrigger();
 
-            yield return new WaitForSeconds(oneByOneReloadDurationPerRound);
+            yield return new WaitForSecondsRealtime(oneByOneReloadDurationPerRound);
 
             int loaded = totalAmmoSetter.ConsumeAmmo(ammoType, 1);
 
@@ -278,7 +278,7 @@ public class WeaponAmmoSettings : MonoBehaviour
                 break;
 
             if (oneByOneReloadBoolOffGap > 0f)
-                yield return new WaitForSeconds(oneByOneReloadBoolOffGap);
+                yield return new WaitForSecondsRealtime(oneByOneReloadBoolOffGap);
             else
                 yield return null;
         }
