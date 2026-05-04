@@ -483,6 +483,9 @@ void OnAnimatorMove()
         if (useRootMotionLocomotion && hasMoveInput && !externalMovementLock && !recoveryLocked)
         {
             float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+            if (animator.updateMode == AnimatorUpdateMode.UnscaledTime)
+                speedMult = 1f;
+
             delta = animator.deltaPosition * rootMotionScale * speedMult;
             delta.y = 0f;
         }
@@ -627,9 +630,6 @@ void OnAnimatorMove()
 
 void UpdateDive(float dt)
     {
-        float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
-        dt *= speedMult;
-
         // Dive can only be canceled by a new Aim press during Dive
         if (allowAimCancelDive && aimSettings != null && aimSettings.AimPressedThisFrame)
         {
@@ -772,9 +772,6 @@ void UpdateDive(float dt)
 
 void UpdateSlide(float dt)
     {
-        float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
-        dt *= speedMult;
-
         // Slide can only be canceled by a new Aim press during Slide
         if (allowAimCancelSlide && aimSettings != null && aimSettings.AimPressedThisFrame)
         {

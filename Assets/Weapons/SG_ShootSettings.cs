@@ -248,9 +248,9 @@ public class SG_ShootSettings : MonoBehaviour
         wasRealAimHeldLastFrame = realAimHeldNow;
     }
 
-    private IEnumerator DelayedQuickShotRoutine()
+private IEnumerator DelayedQuickShotRoutine()
     {
-        yield return new WaitForSeconds(quickShotShootDelay);
+        yield return new WaitForSecondsRealtime(quickShotShootDelay);
 
         quickShotDelayRoutine = null;
 
@@ -323,12 +323,12 @@ public class SG_ShootSettings : MonoBehaviour
             aimSettings.SetExternalAimOverride(true);
     }
 
-    private bool IsInShootCooldown()
+private bool IsInShootCooldown()
     {
-        return shootCooldown > 0f && Time.time < nextShootTime;
+        return shootCooldown > 0f && Time.unscaledTime < nextShootTime;
     }
 
-    public void Shoot()
+public void Shoot()
     {
         if (IsInShootCooldown())
             return;
@@ -376,7 +376,7 @@ public class SG_ShootSettings : MonoBehaviour
                 return;
         }
 
-        nextShootTime = Time.time + Mathf.Max(0f, shootCooldown);
+        nextShootTime = Time.unscaledTime + Mathf.Max(0f, shootCooldown);
 
         if (PlayerCrossHairSettings != null && useRecoil)
         {
@@ -583,11 +583,11 @@ public class SG_ShootSettings : MonoBehaviour
         return true;
     }
 
-    private IEnumerator ResetIsShootingAfterDelay()
+private IEnumerator ResetIsShootingAfterDelay()
     {
         float delay = Mathf.Max(0.01f, Mathf.Min(isShootingHoldTime, shootCooldown - 0.01f));
 
-        yield return new WaitForSeconds(delay);
+        yield return new WaitForSecondsRealtime(delay);
 
         if (animator != null)
             animator.SetBool(isShootingBoolHash, false);

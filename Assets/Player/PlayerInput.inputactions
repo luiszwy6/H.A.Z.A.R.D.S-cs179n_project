@@ -203,6 +203,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "BulletTime",
+                    "type": "Button",
+                    "id": "0d851bef-2e51-4962-a1e2-dcea3c5c460b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -665,6 +674,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Slot 5",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "3746028c-3226-4586-a083-92343410605d",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "BulletTime",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
