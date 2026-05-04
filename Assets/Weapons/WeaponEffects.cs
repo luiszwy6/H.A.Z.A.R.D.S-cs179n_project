@@ -20,6 +20,16 @@ public class WeaponEffects : MonoBehaviour
         if (audioSource == null) audioSource = GetComponentInParent<AudioSource>();
     }
 
+private void Awake()
+    {
+        if (muzzleFlash != null)
+        {
+            var main = muzzleFlash.main;
+            main.useUnscaledTime = true;
+        }
+    }
+
+
     public void PlayGunshot()
     {
         if (muzzleFlash != null)

@@ -255,9 +255,9 @@ public class ARShootSettings : MonoBehaviour
         SetAnimatorKeepShootingBool(false);
     }
 
-    public void Shoot()
+public void Shoot()
     {
-        if (shootCooldown > 0f && Time.time < nextShootTime)
+        if (shootCooldown > 0f && Time.unscaledTime < nextShootTime)
             return;
 
         if (externalShootLock)
@@ -328,7 +328,7 @@ public class ARShootSettings : MonoBehaviour
 
         SetAnimatorKeepShootingBool(true);
 
-        nextShootTime = Time.time + Mathf.Max(0f, shootCooldown);
+        nextShootTime = Time.unscaledTime + Mathf.Max(0f, shootCooldown);
 
         if (PlayerCrossHairSettings != null && useRecoil)
         {
@@ -511,11 +511,11 @@ public class ARShootSettings : MonoBehaviour
         return true;
     }
 
-    private IEnumerator ResetIsShootingAfterDelay()
+private IEnumerator ResetIsShootingAfterDelay()
     {
         float delay = Mathf.Max(0.01f, Mathf.Min(isShootingHoldTime, shootCooldown - 0.01f));
 
-        yield return new WaitForSeconds(delay);
+        yield return new WaitForSecondsRealtime(delay);
 
         if (animator != null)
             animator.SetBool(isShootingBoolHash, false);
