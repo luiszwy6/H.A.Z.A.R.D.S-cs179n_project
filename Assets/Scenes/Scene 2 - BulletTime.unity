@@ -2877,6 +2877,8 @@ GameObject:
   - component: {fileID: 1974371884}
   - component: {fileID: 1974371886}
   - component: {fileID: 1974371887}
+  - component: {fileID: 1974371889}
+  - component: {fileID: 1974371890}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -2984,6 +2986,7 @@ MonoBehaviour:
   useRootMotionLocomotion: 1
   useRootMotionRotation: 0
   rootMotionScale: 1
+  externalSpeedMultiplier: 1
   cameraTransform: {fileID: 1161148377}
   speedDampTime: 0.1
   riseSpeed: 2
@@ -3270,6 +3273,45 @@ MonoBehaviour:
   cancelReloadOnSwitch: 1
   blockSwitchWhileReloading: 0
   blockSwitchWhileShootingLocked: 1
+--- !u!114 &1974371889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974371873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71a17570f8ace7b44bb2b7920bdaa77c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BulletTimeAbility
+  maxResource: 5
+  drainPerSecond: 1
+  regenPerSecond: 0.7
+  timeScale: 0.25
+  fixedDeltaScale: 1
+  toggleCooldown: 1
+  actionName: BulletTime
+  playerMovement: {fileID: 0}
+--- !u!114 &1974371890
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974371873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06f03e23e814de740bd0cb1104e0d855, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowBulletTime
+  bulletTimeAbility: {fileID: 1974371889}
+  showBulletTime: 1
+  offsetFromBottomLeft: {x: 250, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Bullet Time
 --- !u!4 &1978971266 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8191740002585371210, guid: 37ddb3d9f6dc8f044b72b84460aef1a6, type: 3}
