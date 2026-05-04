@@ -79,6 +79,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Reload",
+                    "type": "Button",
+                    "id": "f21b67ed-f1c7-455e-aeb7-cdb94b547fad",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Change View",
                     "type": "Button",
                     "id": "cc7f965f-8b18-4be1-b00d-0250b2d38214",
@@ -127,6 +136,69 @@
                     "name": "Finish",
                     "type": "Button",
                     "id": "182738d1-55c1-4178-8ef3-fea205463ef3",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ChangeWeaponUp",
+                    "type": "PassThrough",
+                    "id": "89a7a320-fd72-49ba-afa3-1947923be07d",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ChangeWeaponDown",
+                    "type": "PassThrough",
+                    "id": "7c4d0119-b0a3-4aaf-9938-deb3c9572f5f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Slot 1",
+                    "type": "Button",
+                    "id": "1b7c7f8c-52d1-47b7-af8e-ad12a9fd5b3b",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Slot 2",
+                    "type": "Button",
+                    "id": "7d7f0d5c-9d78-4455-a106-c2649b80355d",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Slot 3",
+                    "type": "Button",
+                    "id": "72e1d2f8-cf15-4b79-bd34-0f61f2d8cf6a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Slot 4",
+                    "type": "Button",
+                    "id": "db66b5ef-76db-451c-92cc-3337bf60270f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Slot 5",
+                    "type": "Button",
+                    "id": "8b599169-495e-4a57-bbc5-afefe1666999",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -505,6 +577,94 @@
                     "processors": "",
                     "groups": "",
                     "action": "Finish",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "0383aab1-fc2e-42da-bbc7-71405c9f1b27",
+                    "path": "<Keyboard>/r",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Reload",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "17a3517a-d50f-4791-a443-f506b005ef87",
+                    "path": "<Mouse>/scroll/up",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ChangeWeaponUp",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2bd6c2c1-3ba6-4e04-845e-ad575a3cda08",
+                    "path": "<Mouse>/scroll/down",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ChangeWeaponDown",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b7e21564-4a2c-4b7a-bb67-088b06f5827a",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Slot 1",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "886b7af0-535d-4812-ba19-d1951c46317d",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Slot 2",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6655988c-e713-4cee-ab9c-92cc963a8b22",
+                    "path": "<Keyboard>/3",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Slot 3",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "62b77c7d-8d7b-4b6c-b8b3-a0cd9bfea417",
+                    "path": "<Keyboard>/4",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Slot 4",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "350ad0b2-5f14-40e7-b6d5-89f1a1944dc3",
+                    "path": "<Keyboard>/5",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Slot 5",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
