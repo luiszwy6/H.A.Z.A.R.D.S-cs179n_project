@@ -151,6 +151,7 @@ GameObject:
   - component: {fileID: 107016413}
   - component: {fileID: 107016412}
   - component: {fileID: 107016411}
+  - component: {fileID: 107016415}
   m_Layer: 3
   m_Name: Ground
   m_TagString: Untagged
@@ -251,6 +252,38 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &107016415
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 107016410}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5ac11cc976e418e8d13136b07e1f52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.AI.Navigation::Unity.AI.Navigation.NavMeshSurface
+  m_SerializedVersion: 0
+  m_AgentTypeID: 0
+  m_CollectObjects: 0
+  m_Size: {x: 10, y: 10, z: 10}
+  m_Center: {x: 0, y: 2, z: 0}
+  m_LayerMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_UseGeometry: 0
+  m_DefaultArea: 0
+  m_GenerateLinks: 0
+  m_IgnoreNavMeshAgent: 1
+  m_IgnoreNavMeshObstacle: 1
+  m_OverrideTileSize: 0
+  m_TileSize: 256
+  m_OverrideVoxelSize: 0
+  m_VoxelSize: 0.16666667
+  m_MinRegionArea: 2
+  m_NavMeshData: {fileID: 23800000, guid: bd7549153f2e5de45b0eb66c1195f238, type: 2}
+  m_BuildHeightMesh: 0
 --- !u!4 &126925795 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -6897756558726502734, guid: 37ddb3d9f6dc8f044b72b84460aef1a6, type: 3}
@@ -1668,6 +1701,60 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8447082967072642302, guid: 37ddb3d9f6dc8f044b72b84460aef1a6, type: 3}
   m_PrefabInstance: {fileID: 280198712}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &899211177
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 899211179}
+  - component: {fileID: 899211178}
+  m_Layer: 0
+  m_Name: EnemySpawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &899211178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 899211177}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac090f820d3bd345a9c3f2bd9743b75, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemySquadSpawner
+  squads: []
+  spawnOnStart: 1
+  navMeshSampleRadius: 4
+  sharedSightRange: 18
+  sharedPatrolPoints: []
+  meleeColor: {r: 0.85, g: 0.25, b: 0.2, a: 1}
+  rangedColor: {r: 0.2, g: 0.6, b: 0.95, a: 1}
+  meleeScale: {x: 0.75, y: 0.85, z: 0.75}
+  rangedScale: {x: 0.72, y: 0.82, z: 0.72}
+  enemyRoot: {fileID: 899211179}
+--- !u!4 &899211179
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 899211177}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.05062, y: 1.38326, z: -6.41}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &915803317 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6000407479487422213, guid: 37ddb3d9f6dc8f044b72b84460aef1a6, type: 3}
@@ -2879,7 +2966,7 @@ GameObject:
   - component: {fileID: 1974371887}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -14059,3 +14146,4 @@ SceneRoots:
   - {fileID: 755711632}
   - {fileID: 3066250111609483243}
   - {fileID: 1225823292}
+  - {fileID: 899211179}
