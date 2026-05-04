@@ -21,12 +21,15 @@ public class PlayerMovement : MonoBehaviour
     public bool useRootMotionRotation = false;
     public float rootMotionScale = 1f;
 
+    [Header("External Speed Multipliers")]
+    [Min(0.01f)] public float externalSpeedMultiplier = 1f;
     [Header("Camera Transform")]
     public Transform cameraTransform;
 
     [Header("Animation")]
     public float speedDampTime = 0.1f;
 
+    
     [Header("Dive Settings")]
     public float diveDistance = 4f;
     public float diveDuration = 0.45f;
@@ -155,9 +158,10 @@ public class PlayerMovement : MonoBehaviour
         proneAction?.Disable();
     }
 
-    void Update()
+void Update()
     {
-        float dt = Time.deltaTime;
+        float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+        float dt = Time.deltaTime * speedMult;
 
         // Keep the controller grounded with a small downward force
         isGrounded = controller.isGrounded;
@@ -432,7 +436,7 @@ public class PlayerMovement : MonoBehaviour
         LogCurrentStateIfChanged();
     }
 
-    void OnAnimatorMove()
+void OnAnimatorMove()
     {
         if (animator == null || controller == null)
             return;
@@ -452,11 +456,13 @@ public class PlayerMovement : MonoBehaviour
         // Normal locomotion root motion only runs when not in special actions
         if (useRootMotionLocomotion && hasMoveInput && !externalMovementLock && !recoveryLocked)
         {
-            delta = animator.deltaPosition * rootMotionScale;
+            float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+            delta = animator.deltaPosition * rootMotionScale * speedMult;
             delta.y = 0f;
         }
 
-        delta.y += velocity.y * Time.deltaTime;
+        float gravityMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+        delta.y += velocity.y * Time.deltaTime * gravityMult;
 
         CollisionFlags flags = controller.Move(delta);
 
@@ -597,8 +603,11 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void UpdateDive(float dt)
+void UpdateDive(float dt)
     {
+        float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+        dt *= speedMult;
+
         // Dive can only be canceled by a new Aim press during Dive
         if (allowAimCancelDive && aimSettings != null && aimSettings.AimPressedThisFrame)
         {
@@ -741,8 +750,11 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
-    void UpdateSlide(float dt)
+void UpdateSlide(float dt)
     {
+        float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
+        dt *= speedMult;
+
         // Slide can only be canceled by a new Aim press during Slide
         if (allowAimCancelSlide && aimSettings != null && aimSettings.AimPressedThisFrame)
         {
