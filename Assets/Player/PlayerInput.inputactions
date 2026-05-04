@@ -212,6 +212,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Camouflage",
+                    "type": "Button",
+                    "id": "6c6948b0-c21b-4538-9803-0e637b33a79d",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -685,6 +694,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "BulletTime",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "621450e6-7713-4c50-8862-25f31e1ac26e",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Camouflage",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
