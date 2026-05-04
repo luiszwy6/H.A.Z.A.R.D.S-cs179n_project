@@ -426,14 +426,14 @@ public class PlayerWeaponSlots : MonoBehaviour
         switchingRoutine = StartCoroutine(SwitchingRoutine());
     }
 
-    private IEnumerator SwitchingRoutine()
+private IEnumerator SwitchingRoutine()
     {
         isSwitching = true;
         SetAnimatorSwitchingBool(true);
         ApplySwitchRigWeights();
 
         if (switchingDuration > 0f)
-            yield return new WaitForSeconds(switchingDuration);
+            yield return new WaitForSecondsRealtime(switchingDuration);
         else
             yield return null;
 

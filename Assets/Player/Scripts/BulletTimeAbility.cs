@@ -121,7 +121,12 @@ void ApplyTimeScale()
         restoringTime = false;
 
         if (playerMovement != null)
+        {
             playerMovement.externalSpeedMultiplier = 1f / clampedScale;
+            Animator anim = playerMovement.GetComponentInChildren<Animator>();
+            if (anim != null)
+                anim.updateMode = AnimatorUpdateMode.UnscaledTime;
+        }
     }
 
 void RestoreTimeScaleImmediate()
@@ -131,7 +136,12 @@ void RestoreTimeScaleImmediate()
         restoringTime = true;
 
         if (playerMovement != null)
+        {
             playerMovement.externalSpeedMultiplier = 1f;
+            Animator anim = playerMovement.GetComponentInChildren<Animator>();
+            if (anim != null)
+                anim.updateMode = AnimatorUpdateMode.Normal;
+        }
     }
 
     void OnApplicationFocus(bool hasFocus)
