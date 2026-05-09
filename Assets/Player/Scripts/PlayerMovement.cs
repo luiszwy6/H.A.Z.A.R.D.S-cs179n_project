@@ -111,7 +111,7 @@ public class PlayerMovement : MonoBehaviour
     public bool IsSlidingNow => isSliding;
 
     public bool IsRecoveryLockedNow =>
-        Time.time < postDiveLockUntilTime || Time.time < postSlideLockUntilTime;
+        Time.unscaledTime < postDiveLockUntilTime || Time.unscaledTime < postSlideLockUntilTime;
 
     public bool CanShootNow =>
         !isDiving &&
@@ -208,8 +208,8 @@ void Update()
             return;
         }
 
-        bool postDiveLocked = Time.time < postDiveLockUntilTime;
-        bool postSlideLocked = Time.time < postSlideLockUntilTime;
+        bool postDiveLocked = Time.unscaledTime < postDiveLockUntilTime;
+        bool postSlideLocked = Time.unscaledTime < postSlideLockUntilTime;
         bool recoveryLocked = postDiveLocked || postSlideLocked;
 
         Vector2 moveInput = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
@@ -259,7 +259,7 @@ void Update()
                            diveAction != null &&
                            diveAction.WasPerformedThisFrame();
 
-        bool canDive = Time.time >= lastDiveTime + diveCooldown;
+        bool canDive = Time.unscaledTime >= lastDiveTime + diveCooldown;
 
         if (divePressed && isGrounded && !isDiving && !isSliding && !isProne && canDive)
         {
@@ -307,7 +307,7 @@ void Update()
                            !proneHoldInProgress &&
                            runRequested &&
                            !rawAimHeld &&
-                           Time.time >= lastSlideTime + slideCooldown;
+                           Time.unscaledTime >= lastSlideTime + slideCooldown;
 
         if (canSlideNow)
         {
@@ -468,8 +468,8 @@ void OnAnimatorMove()
         if (animator == null || controller == null)
             return;
 
-        bool postDiveLocked = Time.time < postDiveLockUntilTime;
-        bool postSlideLocked = Time.time < postSlideLockUntilTime;
+        bool postDiveLocked = Time.unscaledTime < postDiveLockUntilTime;
+        bool postSlideLocked = Time.unscaledTime < postSlideLockUntilTime;
         bool recoveryLocked = postDiveLocked || postSlideLocked;
 
         if (isDiving)
@@ -562,8 +562,8 @@ void OnAnimatorMove()
         if (moveAction == null || runAction == null)
             return false;
 
-        bool postDiveLocked = Time.time < postDiveLockUntilTime;
-        bool postSlideLocked = Time.time < postSlideLockUntilTime;
+        bool postDiveLocked = Time.unscaledTime < postDiveLockUntilTime;
+        bool postSlideLocked = Time.unscaledTime < postSlideLockUntilTime;
         bool recoveryLocked = postDiveLocked || postSlideLocked;
 
         if (externalMovementLock || recoveryLocked)
@@ -575,7 +575,7 @@ void OnAnimatorMove()
         if (isDiving || isSliding || isProne || proneHoldInProgress)
             return false;
 
-        if (Time.time < lastSlideTime + slideCooldown)
+        if (Time.unscaledTime < lastSlideTime + slideCooldown)
             return false;
 
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
@@ -603,7 +603,7 @@ void OnAnimatorMove()
         isProne = false;
         isCrouching = false;
         isAiming = false;
-        lastDiveTime = Time.time;
+        lastDiveTime = Time.unscaledTime;
 
         if (animator != null)
         {
@@ -664,7 +664,7 @@ void UpdateDive(float dt)
             isProne = false;
             isCrouching = true;
             isAiming = false;
-            postDiveLockUntilTime = Time.time + diveRecoveryLockDuration;
+            postDiveLockUntilTime = Time.unscaledTime + diveRecoveryLockDuration;
 
             if (animator != null)
             {
@@ -736,7 +736,7 @@ void UpdateDive(float dt)
         isCrouching = false;
         isAiming = false;
 
-        lastSlideTime = Time.time;
+        lastSlideTime = Time.unscaledTime;
         currentSlideDistance = useProneSlide ? proneSlideDistance : crouchSlideDistance;
         currentSlideDuration = useProneSlide ? proneSlideDuration : crouchSlideDuration;
         slideTimer = currentSlideDuration;
@@ -865,7 +865,7 @@ void UpdateSlide(float dt)
         }
 
         if (applyRecoveryLock)
-            postSlideLockUntilTime = Time.time + slideRecoveryLockDuration;
+            postSlideLockUntilTime = Time.unscaledTime + slideRecoveryLockDuration;
         else
             postSlideLockUntilTime = -999f;
     }
