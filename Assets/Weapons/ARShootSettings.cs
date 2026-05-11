@@ -13,6 +13,7 @@ public class ARShootSettings : MonoBehaviour
     [SerializeField] private CameraNoiseByMovement cameraNoiseByMovement;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private WeaponAmmoSettings WeaponAmmoSettings;
+    [SerializeField] private AR_DamageSetting damageSetting;
 
     [Header("Weapon SFX/VFX")]
     [SerializeField] private WeaponEffects weaponEffects;
@@ -24,6 +25,12 @@ public class ARShootSettings : MonoBehaviour
     [Header("Quick Shot Rotation")]
     [SerializeField] private bool useQuickShotRotationSpeedOverride = true;
     [Min(0f)] [SerializeField] private float quickShotRotationSpeed = 22f;
+
+    [Header("Quick Shot Timing")]
+    [SerializeField] private bool waitForQuickShotFacing = true;
+    [Min(0f)] [SerializeField] private float quickShotMinWaitTime = 0.03f;
+    [Min(0f)] [SerializeField] private float quickShotMaxWaitTime = 0.12f;
+    [Min(0f)] [SerializeField] private float quickShotFireAngle = 8f;
 
     [Header("Projectile - Real Logic")]
     [SerializeField] private BulletProjectile bulletProjectilePrefab;
@@ -39,6 +46,12 @@ public class ARShootSettings : MonoBehaviour
     [SerializeField] private bool spawnVisualProjectile = true;
     [SerializeField] private Transform visualProjectileSpawnOverride;
     [Min(0.01f)] [SerializeField] private float visualBulletSpeed = 150f;
+
+    [Header("Projectile - Visual Penetration")]
+    [SerializeField] private bool visualPenetratesWhenWeaponPenetrates = true;
+    [SerializeField] private bool forceVisualPenetration = false;
+    [SerializeField] private LayerMask visualPenetrationStopMask = 0;
+    [SerializeField] private QueryTriggerInteraction visualPenetrationTriggerInteraction = QueryTriggerInteraction.Ignore;
 
     [Header("Fire Rate")]
     [Min(0f)] [SerializeField] private float shootCooldown = 0.12f;
@@ -83,6 +96,10 @@ public class ARShootSettings : MonoBehaviour
     private bool quickShotRequiresRelease;
     private bool wasRealAimHeldLastFrame;
 
+    private bool quickShotPendingFire;
+    private float quickShotPendingStartTime;
+    private bool quickShotFirstShotFired;
+
     private void Reset()
     {
         Transform root = transform.root;
@@ -95,6 +112,9 @@ public class ARShootSettings : MonoBehaviour
 
         if (WeaponAmmoSettings == null)
             WeaponAmmoSettings = GetComponent<WeaponAmmoSettings>();
+
+        if (damageSetting == null)
+            damageSetting = GetComponent<AR_DamageSetting>();
 
         if (weaponEffects == null)
             weaponEffects = GetComponentInChildren<WeaponEffects>();
@@ -124,6 +144,9 @@ public class ARShootSettings : MonoBehaviour
 
         if (WeaponAmmoSettings == null)
             WeaponAmmoSettings = GetComponent<WeaponAmmoSettings>();
+
+        if (damageSetting == null)
+            damageSetting = GetComponent<AR_DamageSetting>();
 
         if (weaponEffects == null)
             weaponEffects = GetComponentInChildren<WeaponEffects>();
@@ -179,21 +202,19 @@ public class ARShootSettings : MonoBehaviour
 
         if (shootReleasedThisFrame)
         {
-            quickShotSessionActive = false;
-            quickShotRequiresRelease = false;
-
-            if (aimSettings != null)
-                aimSettings.SetExternalAimOverride(false);
-
-            if (animator != null)
-                animator.SetBool(quickShotBoolHash, false);
-
+            ClearQuickShotState();
             SetAnimatorKeepShootingBool(false);
         }
 
         if (shootPressedThisFrame && !realAimHeldNow && allowQuickShot && !quickShotRequiresRelease)
         {
+            if (IsInShootCooldown())
+                return;
+
             quickShotSessionActive = true;
+            quickShotRequiresRelease = false;
+            quickShotFirstShotFired = false;
+            StartQuickShotPendingFire();
             ApplyQuickShotAimOverride();
 
             if (animator != null)
@@ -204,9 +225,10 @@ public class ARShootSettings : MonoBehaviour
         {
             quickShotSessionActive = false;
             quickShotRequiresRelease = true;
+            quickShotPendingFire = false;
+            quickShotFirstShotFired = false;
 
-            if (aimSettings != null)
-                aimSettings.SetExternalAimOverride(false);
+            ClearQuickShotAimOverride();
 
             if (animator != null)
                 animator.SetBool(quickShotBoolHash, false);
@@ -222,14 +244,34 @@ public class ARShootSettings : MonoBehaviour
 
         bool canUseAimFire = shootHeld && realAimHeldNow;
         bool canUseQuickShotFire = shootHeld && quickShotSessionActive && !quickShotRequiresRelease;
-        bool wantsToFire = canUseAimFire || canUseQuickShotFire;
 
-        if (wantsToFire)
+        if (canUseQuickShotFire)
         {
+            if (quickShotFirstShotFired)
+            {
+                Shoot();
+            }
+            else
+            {
+                if (!quickShotPendingFire)
+                    StartQuickShotPendingFire();
+
+                if (IsQuickShotReadyToFire())
+                {
+                    quickShotPendingFire = false;
+                    Shoot();
+                    quickShotFirstShotFired = true;
+                }
+            }
+        }
+        else if (canUseAimFire)
+        {
+            quickShotPendingFire = false;
             Shoot();
         }
         else
         {
+            quickShotPendingFire = false;
             SetAnimatorKeepShootingBool(false);
         }
 
@@ -241,10 +283,11 @@ public class ARShootSettings : MonoBehaviour
         quickShotSessionActive = false;
         quickShotRequiresRelease = false;
         wasRealAimHeldLastFrame = false;
+        quickShotPendingFire = false;
+        quickShotFirstShotFired = false;
         externalShootLock = false;
 
-        if (aimSettings != null)
-            aimSettings.SetExternalAimOverride(false);
+        ClearQuickShotAimOverride();
 
         if (animator != null)
         {
@@ -255,18 +298,12 @@ public class ARShootSettings : MonoBehaviour
         SetAnimatorKeepShootingBool(false);
     }
 
-public void Shoot()
+    public void Shoot()
     {
-        if (shootCooldown > 0f && Time.unscaledTime < nextShootTime)
+        if (IsInShootCooldown())
             return;
 
         if (externalShootLock)
-        {
-            StopContinuousShootingState();
-            return;
-        }
-
-        if (playerMovement != null && !playerMovement.CanShootNow)
         {
             StopContinuousShootingState();
             return;
@@ -295,6 +332,26 @@ public void Shoot()
         bool realAimHeldNow = aimSettings != null && aimSettings.IsAimInputHeld;
         bool isQuickShot = !realAimHeldNow && quickShotSessionActive && !quickShotRequiresRelease;
         bool isAimingShot = !isQuickShot;
+
+        if (playerMovement != null)
+        {
+            if (isQuickShot)
+            {
+                if (!playerMovement.CanQuickShotNow)
+                {
+                    StopContinuousShootingState();
+                    return;
+                }
+            }
+            else
+            {
+                if (!playerMovement.CanAimShootNow)
+                {
+                    StopContinuousShootingState();
+                    return;
+                }
+            }
+        }
 
         if (isQuickShot && !allowQuickShot)
         {
@@ -355,15 +412,26 @@ public void Shoot()
 
         MuzzlePointSettings.RequestDebugDraw();
 
-        Vector3 origin = projectileSpawnOverride != null
-            ? projectileSpawnOverride.position
-            : MuzzlePointSettings.LastRay.origin;
+        Vector3 origin;
+        Vector3 dir;
 
-        Vector3 targetPoint = ResolveShotTargetPoint(origin, isAimingShot);
+        if (TryGetViewShotRay(out Ray viewShotRay))
+        {
+            origin = viewShotRay.origin;
+            dir = viewShotRay.direction;
+        }
+        else
+        {
+            origin = projectileSpawnOverride != null
+                ? projectileSpawnOverride.position
+                : MuzzlePointSettings.LastRay.origin;
 
-        Vector3 dir = targetPoint - origin;
-        if (dir.sqrMagnitude <= 0.0001f)
-            dir = MuzzlePointSettings.LastRay.direction;
+            Vector3 targetPoint = ResolveShotTargetPoint(origin, isAimingShot);
+
+            dir = targetPoint - origin;
+            if (dir.sqrMagnitude <= 0.0001f)
+                dir = MuzzlePointSettings.LastRay.direction;
+        }
 
         dir.Normalize();
 
@@ -383,21 +451,101 @@ public void Shoot()
             projectileTriggerInteraction
         );
 
+        if (damageSetting != null)
+            damageSetting.ApplyToProjectile(bullet);
+
         SpawnVisualProjectile(shotRay);
 
         if (weaponEffects != null)
             weaponEffects.PlayGunshot();
     }
 
+    private void StartQuickShotPendingFire()
+    {
+        quickShotPendingFire = true;
+        quickShotPendingStartTime = Time.unscaledTime;
+    }
+
+    private bool IsQuickShotReadyToFire()
+    {
+        if (!waitForQuickShotFacing)
+            return true;
+
+        float elapsed = Time.unscaledTime - quickShotPendingStartTime;
+
+        if (elapsed < quickShotMinWaitTime)
+            return false;
+
+        if (elapsed >= quickShotMaxWaitTime)
+            return true;
+
+        if (playerMovement == null || playerMovement.ActiveView == null)
+            return true;
+
+        Vector3 aimDir = playerMovement.ActiveView.ViewAimWorldDir;
+        aimDir.y = 0f;
+
+        if (aimDir.sqrMagnitude <= 0.0001f)
+            return false;
+
+        aimDir.Normalize();
+
+        Vector3 forward = playerMovement.transform.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude <= 0.0001f)
+            return true;
+
+        forward.Normalize();
+
+        float angle = Vector3.Angle(forward, aimDir);
+        return angle <= quickShotFireAngle;
+    }
+
+    private bool IsInShootCooldown()
+    {
+        return shootCooldown > 0f && Time.unscaledTime < nextShootTime;
+    }
+
     private void ApplyQuickShotAimOverride()
     {
-        if (aimSettings == null)
-            return;
+        if (aimSettings != null)
+        {
+            if (useQuickShotRotationSpeedOverride)
+                aimSettings.SetExternalAimOverride(true, quickShotRotationSpeed);
+            else
+                aimSettings.SetExternalAimOverride(true);
+        }
 
-        if (useQuickShotRotationSpeedOverride)
-            aimSettings.SetExternalAimOverride(true, quickShotRotationSpeed);
-        else
-            aimSettings.SetExternalAimOverride(true);
+        if (playerMovement != null && playerMovement.ActiveView != null)
+        {
+            if (useQuickShotRotationSpeedOverride)
+                playerMovement.ActiveView.SetExternalAimOverride(true, quickShotRotationSpeed);
+            else
+                playerMovement.ActiveView.SetExternalAimOverride(true);
+        }
+    }
+
+    private void ClearQuickShotAimOverride()
+    {
+        if (aimSettings != null)
+            aimSettings.SetExternalAimOverride(false);
+
+        if (playerMovement != null && playerMovement.ActiveView != null)
+            playerMovement.ActiveView.SetExternalAimOverride(false);
+    }
+
+    private void ClearQuickShotState()
+    {
+        quickShotSessionActive = false;
+        quickShotRequiresRelease = false;
+        quickShotPendingFire = false;
+        quickShotFirstShotFired = false;
+
+        ClearQuickShotAimOverride();
+
+        if (animator != null)
+            animator.SetBool(quickShotBoolHash, false);
     }
 
     private void StopContinuousShootingState()
@@ -412,9 +560,10 @@ public void Shoot()
     {
         quickShotSessionActive = false;
         quickShotRequiresRelease = true;
+        quickShotPendingFire = false;
+        quickShotFirstShotFired = false;
 
-        if (aimSettings != null)
-            aimSettings.SetExternalAimOverride(false);
+        ClearQuickShotAimOverride();
 
         if (animator != null)
         {
@@ -436,9 +585,22 @@ public void Shoot()
         animator.SetBool(keepShootingBoolHash, value);
     }
 
+    private bool TryGetViewShotRay(out Ray shotRay)
+    {
+        shotRay = default;
+
+        if (playerMovement == null)
+            return false;
+
+        if (playerMovement.ActiveView == null)
+            return false;
+
+        return playerMovement.ActiveView.TryGetViewShotRay(out shotRay);
+    }
+
     private Vector3 ResolveShotTargetPoint(Vector3 origin, bool isAimingShot)
     {
-        if (isAimingShot && MuzzlePointSettings != null)
+        if (MuzzlePointSettings != null)
             return MuzzlePointSettings.AimPoint;
 
         if (TryGetQuickShotMousePoint(out Vector3 mousePoint))
@@ -511,7 +673,7 @@ public void Shoot()
         return true;
     }
 
-private IEnumerator ResetIsShootingAfterDelay()
+    private IEnumerator ResetIsShootingAfterDelay()
     {
         float delay = Mathf.Max(0.01f, Mathf.Min(isShootingHoldTime, shootCooldown - 0.01f));
 
@@ -571,12 +733,23 @@ private IEnumerator ResetIsShootingAfterDelay()
 
         Vector3 targetPoint;
 
-        if (Physics.Raycast(
-            shotRay,
-            out RaycastHit hit,
-            bulletMaxDistance,
-            bulletHitMask,
-            projectileTriggerInteraction))
+        bool visualShouldPenetrate = ShouldVisualPenetrate();
+
+        LayerMask maskToUse = visualShouldPenetrate
+            ? visualPenetrationStopMask
+            : bulletHitMask;
+
+        QueryTriggerInteraction triggerInteractionToUse = visualShouldPenetrate
+            ? visualPenetrationTriggerInteraction
+            : projectileTriggerInteraction;
+
+        if (maskToUse.value != 0 &&
+            Physics.Raycast(
+                shotRay,
+                out RaycastHit hit,
+                bulletMaxDistance,
+                maskToUse,
+                triggerInteractionToUse))
         {
             targetPoint = hit.point;
         }
@@ -589,5 +762,16 @@ private IEnumerator ResetIsShootingAfterDelay()
             Instantiate(visualBulletProjectilePrefab, visualOrigin, Quaternion.identity);
 
         visualBullet.Init(visualOrigin, targetPoint, visualBulletSpeed);
+    }
+
+    private bool ShouldVisualPenetrate()
+    {
+        if (forceVisualPenetration)
+            return true;
+
+        if (!visualPenetratesWhenWeaponPenetrates)
+            return false;
+
+        return damageSetting != null && damageSetting.PenetrationCount > 0;
     }
 }

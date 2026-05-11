@@ -70,6 +70,15 @@
                     "initialStateCheck": false
                 },
                 {
+                    "name": "Scope",
+                    "type": "Button",
+                    "id": "801d39c4-a1aa-4ec1-9fac-60d631282a9a",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Shoot",
                     "type": "Button",
                     "id": "85bbe18d-2bf5-46a4-a74a-2810c9c3ad12",
@@ -88,7 +97,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Change View",
+                    "name": "SwitchView",
                     "type": "Button",
                     "id": "cc7f965f-8b18-4be1-b00d-0250b2d38214",
                     "expectedControlType": "",
@@ -495,7 +504,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Change View",
+                    "action": "SwitchView",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -506,7 +515,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Change View",
+                    "action": "SwitchView",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -700,11 +709,22 @@
                 {
                     "name": "",
                     "id": "621450e6-7713-4c50-8862-25f31e1ac26e",
-                    "path": "<Keyboard>/f",
+                    "path": "<Keyboard>/q",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
                     "action": "Camouflage",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b2762439-4f03-4104-9e51-eedcfe69f7ec",
+                    "path": "<Mouse>/middleButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Scope",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Animations.Rigging;
@@ -17,7 +18,7 @@ public class WeaponAmmoSettings : MonoBehaviour
     [SerializeField] private PlayerInput playerInput;
     [SerializeField] private Animator animator;
     [SerializeField] private PlayerMovement playerMovement;
-    [SerializeField] private Rig reloadDisableRig;
+    [SerializeField] private List<Rig> reloadDisableRigs = new List<Rig>();
 
     [Header("Ammo Settings")]
     [SerializeField] private TotalAmmoSetter.AmmoType ammoType = TotalAmmoSetter.AmmoType.AssaultRifle;
@@ -56,11 +57,9 @@ public class WeaponAmmoSettings : MonoBehaviour
     private int keepReloadingBoolHash;
     private Coroutine reloadRoutine;
 
-    // Code-side reload state. For OneByOne, this stays true for the full reload process.
     private bool isReloading;
 
-    private float cachedRigWeight = 1f;
-    private bool hasCachedRigWeight = false;
+    private readonly Dictionary<Rig, float> cachedRigWeights = new Dictionary<Rig, float>();
 
     public TotalAmmoSetter.AmmoType AmmoType => ammoType;
     public ReloadMode CurrentReloadMode => reloadMode;
@@ -217,13 +216,13 @@ public class WeaponAmmoSettings : MonoBehaviour
     public void ForceClearReloadState()
     {
         isReloading = false;
-        RestoreRigWeight();
+        RestoreRigWeights();
 
         SetAnimatorReloadingBool(false);
         SetAnimatorKeepReloadingBool(false);
     }
 
-private IEnumerator MagazineReloadRoutine()
+    private IEnumerator MagazineReloadRoutine()
     {
         BeginReloadProcess(keepReloadingInAnimator: false);
 
@@ -242,7 +241,7 @@ private IEnumerator MagazineReloadRoutine()
         reloadRoutine = null;
     }
 
-private IEnumerator OneByOneReloadRoutine()
+    private IEnumerator OneByOneReloadRoutine()
     {
         BeginReloadProcess(keepReloadingInAnimator: true);
 
@@ -250,9 +249,6 @@ private IEnumerator OneByOneReloadRoutine()
                totalAmmoSetter != null &&
                totalAmmoSetter.HasAmmo(ammoType))
         {
-            // Per-round animator update:
-            // KeepReloading stays true for the full process.
-            // IsReloading pulses true for this single shell.
             SetAnimatorReloadingBool(true);
             PlayReloadAnimationTrigger();
 
@@ -266,9 +262,6 @@ private IEnumerator OneByOneReloadRoutine()
             currentAmmoInMagazine += loaded;
             currentAmmoInMagazine = Mathf.Clamp(currentAmmoInMagazine, 0, magazineSize);
 
-            // End this shell's reload animation state.
-            // Code-side isReloading stays true.
-            // Animator KeepReloading also stays true.
             SetAnimatorReloadingBool(false);
 
             if (currentAmmoInMagazine >= magazineSize)
@@ -290,7 +283,11 @@ private IEnumerator OneByOneReloadRoutine()
     private void BeginReloadProcess(bool keepReloadingInAnimator)
     {
         isReloading = true;
-        ApplyReloadRigWeight();
+
+        if (playerMovement != null)
+            playerMovement.CancelAimAndRequireRepress();
+
+        ApplyReloadRigWeights();
 
         SetAnimatorKeepReloadingBool(keepReloadingInAnimator);
     }
@@ -298,7 +295,7 @@ private IEnumerator OneByOneReloadRoutine()
     private void EndReloadProcess()
     {
         isReloading = false;
-        RestoreRigWeight();
+        RestoreRigWeights();
 
         SetAnimatorReloadingBool(false);
         SetAnimatorKeepReloadingBool(false);
@@ -343,29 +340,38 @@ private IEnumerator OneByOneReloadRoutine()
         }
     }
 
-    private void ApplyReloadRigWeight()
+    private void ApplyReloadRigWeights()
     {
-        if (reloadDisableRig == null)
+        if (reloadDisableRigs == null)
             return;
 
-        if (!hasCachedRigWeight)
+        for (int i = 0; i < reloadDisableRigs.Count; i++)
         {
-            cachedRigWeight = reloadDisableRig.weight;
-            hasCachedRigWeight = true;
-        }
+            Rig rig = reloadDisableRigs[i];
 
-        reloadDisableRig.weight = reloadRigWeight;
+            if (rig == null)
+                continue;
+
+            if (!cachedRigWeights.ContainsKey(rig))
+                cachedRigWeights.Add(rig, rig.weight);
+
+            rig.weight = reloadRigWeight;
+        }
     }
 
-    private void RestoreRigWeight()
+    private void RestoreRigWeights()
     {
-        if (reloadDisableRig == null)
+        if (cachedRigWeights.Count == 0)
             return;
 
-        if (hasCachedRigWeight)
+        foreach (KeyValuePair<Rig, float> pair in cachedRigWeights)
         {
-            reloadDisableRig.weight = cachedRigWeight;
-            hasCachedRigWeight = false;
+            if (pair.Key == null)
+                continue;
+
+            pair.Key.weight = pair.Value;
         }
+
+        cachedRigWeights.Clear();
     }
 }

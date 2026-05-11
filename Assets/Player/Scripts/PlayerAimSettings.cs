@@ -46,7 +46,7 @@ public class PlayerAimSettings : MonoBehaviour
     private bool externalAimPressedPulse;
     private bool aimHeldState;
     private bool aimPressedThisFrameState;
-
+    private bool inputAimSuppressedUntilRelease;
     private bool externalAimRotationSpeedOverrideActive;
     private float externalAimRotationSpeedOverride;
 
@@ -150,6 +150,20 @@ public class PlayerAimSettings : MonoBehaviour
         }
     }
 
+public void CancelAimAndRequireRepress()
+{
+    externalAimOverride = false;
+    externalAimPressedPulse = false;
+    aimHeldState = false;
+    aimPressedThisFrameState = false;
+    IsAiming = false;
+
+    externalAimRotationSpeedOverrideActive = false;
+    externalAimRotationSpeedOverride = 0f;
+
+    inputAimSuppressedUntilRelease = false;
+}
+
     public bool TryGetExternalAimRotationSpeedOverride(out float rotationSpeed)
     {
         rotationSpeed = externalAimRotationSpeedOverride;
@@ -158,8 +172,16 @@ public class PlayerAimSettings : MonoBehaviour
 
     public Vector3 TickAimAndGetFacingDirection(Transform actor, Vector3 moveDirWorld, bool isCrouching)
     {
-        bool inputAimHeld = aimAction != null && aimAction.IsPressed();
-        bool inputAimPressedThisFrame = aimAction != null && aimAction.WasPressedThisFrame();
+        bool rawInputAimHeld = aimAction != null && aimAction.IsPressed();
+
+        if (!rawInputAimHeld)
+            inputAimSuppressedUntilRelease = false;
+
+        bool inputAimHeld = rawInputAimHeld && !inputAimSuppressedUntilRelease;
+        bool inputAimPressedThisFrame =
+            aimAction != null &&
+            aimAction.WasPressedThisFrame() &&
+            !inputAimSuppressedUntilRelease;
 
         aimHeldState = inputAimHeld || externalAimOverride;
         aimPressedThisFrameState = inputAimPressedThisFrame || externalAimPressedPulse;

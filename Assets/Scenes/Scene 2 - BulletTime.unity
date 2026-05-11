@@ -2879,6 +2879,8 @@ GameObject:
   - component: {fileID: 1974371887}
   - component: {fileID: 1974371889}
   - component: {fileID: 1974371890}
+  - component: {fileID: 1974371892}
+  - component: {fileID: 1974371891}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -3285,14 +3287,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71a17570f8ace7b44bb2b7920bdaa77c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BulletTimeAbility
-  maxResource: 5
+  maxResource: 10
   drainPerSecond: 1
   regenPerSecond: 0.7
-  timeScale: 0.25
+  timeScale: 0.2
   fixedDeltaScale: 1
   toggleCooldown: 1
   actionName: BulletTime
-  playerMovement: {fileID: 0}
+  playerMovement: {fileID: 1974371880}
 --- !u!114 &1974371890
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3312,6 +3314,43 @@ MonoBehaviour:
   boxHeight: 64
   fontSize: 22
   title: Bullet Time
+--- !u!114 &1974371891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974371873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c1bed3da1f62124f8c658bd4149ecb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowCamoCooldown
+  camoAbility: {fileID: 1974371892}
+  showCamo: 1
+  offsetFromBottomLeft: {x: 500, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Camouflage
+--- !u!114 &1974371892
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1974371873}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe54af8b1ba79a409c46788e006ae2e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CamoAbility
+  duration: 15
+  cooldown: 5
+  camoMaterial: {fileID: 2100000, guid: 2fdefac49882b2a4da36efaf5c301eed, type: 2}
+  actionName: Camouflage
+  shootActionName: Shoot
+  stealthTakedownActionName: StealthTakeDown
 --- !u!4 &1978971266 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8191740002585371210, guid: 37ddb3d9f6dc8f044b72b84460aef1a6, type: 3}

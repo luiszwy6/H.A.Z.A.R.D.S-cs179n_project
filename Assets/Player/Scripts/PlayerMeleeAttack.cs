@@ -13,7 +13,6 @@ public class PlayerMeleeAttack : MonoBehaviour
     [SerializeField] private PlayerWeaponSlots playerWeaponSlots;
     [SerializeField] private ARShootSettings fallbackARShootSettings;
     [SerializeField] private SG_ShootSettings fallbackSGShootSettings;
-    
 
     [Header("Input")]
     [SerializeField] private string meleeActionName = "Melee";
@@ -25,9 +24,15 @@ public class PlayerMeleeAttack : MonoBehaviour
     [Header("Cooldown")]
     [SerializeField] private bool useMeleeCooldown = true;
     [SerializeField] private float meleeCooldown = 0.6f;
+
     [Header("Melee Effects")]
     [SerializeField] private MeleeWeaponEffects meleeWeaponEffects;
     [SerializeField] private bool playMeleeEffectOnMeleeInput = true;
+
+    [Header("Melee Damage")]
+    [SerializeField] private MeleeDamage meleeDamage;
+    [SerializeField] private bool autoFindMeleeDamageInChildren = true;
+    [SerializeField] private bool includeInactiveMeleeDamage = true;
 
     [Header("Melee Rig")]
     [SerializeField] private Rig meleeDisableRig;
@@ -86,6 +91,20 @@ public class PlayerMeleeAttack : MonoBehaviour
     public float MeleeCooldownRemaining =>
         IsMeleeOnCooldown ? nextMeleeAllowedTime - Time.time : 0f;
 
+    private void Reset()
+    {
+        playerInput = GetComponent<PlayerInput>();
+        animator = GetComponentInChildren<Animator>();
+        playerMovement = GetComponent<PlayerMovement>();
+        playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+
+        fallbackARShootSettings = GetComponentInChildren<ARShootSettings>(true);
+        fallbackSGShootSettings = GetComponentInChildren<SG_ShootSettings>(true);
+        meleeWeaponEffects = GetComponentInChildren<MeleeWeaponEffects>(true);
+
+        FindMeleeDamage();
+    }
+
     private void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
@@ -100,13 +119,16 @@ public class PlayerMeleeAttack : MonoBehaviour
             playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
 
         if (meleeWeaponEffects == null)
-        meleeWeaponEffects = GetComponentInChildren<MeleeWeaponEffects>(true);
+            meleeWeaponEffects = GetComponentInChildren<MeleeWeaponEffects>(true);
 
         if (fallbackARShootSettings == null)
             fallbackARShootSettings = GetComponentInChildren<ARShootSettings>(true);
 
         if (fallbackSGShootSettings == null)
             fallbackSGShootSettings = GetComponentInChildren<SG_ShootSettings>(true);
+
+        if (meleeDamage == null && autoFindMeleeDamageInChildren)
+            FindMeleeDamage();
 
         meleeTriggerHash = Animator.StringToHash(meleeTriggerName);
         shootTriggerHash = Animator.StringToHash(shootTriggerName);
@@ -143,6 +165,8 @@ public class PlayerMeleeAttack : MonoBehaviour
             meleeAction.Disable();
         }
 
+        CloseDamageWindow();
+
         StopMeleeRigRoutineOnly();
         RestoreMeleeRigWeight();
 
@@ -160,6 +184,9 @@ public class PlayerMeleeAttack : MonoBehaviour
         if (!CanMeleeAttack())
             return false;
 
+        if (playerMovement != null)
+            playerMovement.CancelAimAndRequireRepress();
+
         if (cancelShootingOnMelee)
             CancelShootingRuntime();
 
@@ -167,10 +194,10 @@ public class PlayerMeleeAttack : MonoBehaviour
         ApplyMeleeWeaponVisibility();
 
         PlayMeleeAnimation();
+
         if (playMeleeEffectOnMeleeInput && meleeWeaponEffects != null)
-        {
             meleeWeaponEffects.PlayMeleeEffectFromMeleeInput();
-        }
+
         StartMeleeCooldown();
 
         if (restoreMeleeRigAfterDuration)
@@ -218,6 +245,53 @@ public class PlayerMeleeAttack : MonoBehaviour
         }
 
         return true;
+    }
+
+    [ContextMenu("Find Melee Damage")]
+    public void FindMeleeDamage()
+    {
+        if (meleeWeaponObject != null)
+            meleeDamage = meleeWeaponObject.GetComponentInChildren<MeleeDamage>(includeInactiveMeleeDamage);
+
+        if (meleeDamage == null)
+            meleeDamage = GetComponentInChildren<MeleeDamage>(includeInactiveMeleeDamage);
+    }
+
+    public void OpenDamageWindow()
+    {
+        if (meleeDamage == null && autoFindMeleeDamageInChildren)
+            FindMeleeDamage();
+
+        if (meleeDamage != null)
+            meleeDamage.OpenDamageWindow();
+    }
+
+    public void CloseDamageWindow()
+    {
+        if (meleeDamage == null && autoFindMeleeDamageInChildren)
+            FindMeleeDamage();
+
+        if (meleeDamage != null)
+            meleeDamage.CloseDamageWindow();
+    }
+
+    public void OpenDamageWindowForDefaultDuration()
+    {
+        if (meleeDamage == null && autoFindMeleeDamageInChildren)
+            FindMeleeDamage();
+
+        if (meleeDamage != null)
+            meleeDamage.OpenDamageWindowForDefaultDuration();
+    }
+
+    public void EnableDamage()
+    {
+        OpenDamageWindow();
+    }
+
+    public void DisableDamage()
+    {
+        CloseDamageWindow();
     }
 
     private void CancelShootingRuntime()
@@ -415,10 +489,10 @@ public class PlayerMeleeAttack : MonoBehaviour
     private void StartMeleeWeaponVisibilityRestoreRoutine()
     {
         StopMeleeWeaponVisibilityRoutineOnly();
-        meleeWeaponVisibilityRoutine = StartCoroutine(MeleeWeaponVisibilityRestoreRoutine());
+        meleeWeaponVisibilityRoutine = StartCoroutine(MeleeWeaponVisibilityRoutine());
     }
 
-    private IEnumerator MeleeWeaponVisibilityRestoreRoutine()
+    private IEnumerator MeleeWeaponVisibilityRoutine()
     {
         yield return new WaitForSeconds(Mathf.Max(0f, meleeWeaponVisibleDuration));
 
