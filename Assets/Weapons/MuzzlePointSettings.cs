@@ -5,6 +5,7 @@ public class MuzzlePointSettings : MonoBehaviour
 {
     [Header("Refs")]
     [SerializeField] private Transform muzzlePoint;
+    [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerAimSettings aimSettings;
     [SerializeField] private PlayerCrossHairSettings PlayerCrossHairSettings;
 
@@ -37,6 +38,9 @@ public class MuzzlePointSettings : MonoBehaviour
         if (muzzlePoint == null)
             muzzlePoint = transform;
 
+        if (playerMovement == null)
+            playerMovement = root.GetComponent<PlayerMovement>();
+
         if (aimSettings == null)
             aimSettings = root.GetComponent<PlayerAimSettings>();
 
@@ -53,6 +57,9 @@ public class MuzzlePointSettings : MonoBehaviour
 
         if (muzzlePoint == null)
             muzzlePoint = transform;
+
+        if (playerMovement == null)
+            playerMovement = root.GetComponent<PlayerMovement>();
 
         if (aimSettings == null)
             aimSettings = root.GetComponent<PlayerAimSettings>();
@@ -107,6 +114,13 @@ public class MuzzlePointSettings : MonoBehaviour
 
     private Vector3 ResolveAimPoint(Vector3 origin)
     {
+        if (playerMovement != null &&
+            playerMovement.ActiveView != null &&
+            playerMovement.ActiveView.TryGetMuzzleAimPoint(out Vector3 viewAimPoint))
+        {
+            return viewAimPoint;
+        }
+
         if (aimSettings != null && aimSettings.IsAiming)
         {
             if (PlayerCrossHairSettings != null)

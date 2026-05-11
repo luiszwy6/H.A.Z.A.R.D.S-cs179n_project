@@ -10,6 +10,7 @@ public class CameraNoiseByMovement : MonoBehaviour
     [Header("Noise Settings")]
     [SerializeField] private float walkAmplitude = 0.25f;
     [SerializeField] private float runAmplitude = 0.6f;
+    [SerializeField] private float aimAmplitude = 0.55f;
     [SerializeField] private float frequency = 2.0f;
 
     [Header("Noise Smoothing")]
@@ -17,6 +18,7 @@ public class CameraNoiseByMovement : MonoBehaviour
 
     private static readonly int IsWalkingHash = Animator.StringToHash("IsWalking");
     private static readonly int IsRunningHash = Animator.StringToHash("IsRunning");
+    private static readonly int IsAimingHash = Animator.StringToHash("IsAiming");
 
     private void Reset()
     {
@@ -42,11 +44,13 @@ public class CameraNoiseByMovement : MonoBehaviour
 
         bool isWalking = animator.GetBool(IsWalkingHash);
         bool isRunning = animator.GetBool(IsRunningHash);
-
+        bool isAiming = animator.GetBool(IsAimingHash);
         float targetAmplitude = 0f;
 
         if (isRunning)
             targetAmplitude = runAmplitude;
+        else if (isAiming)
+            targetAmplitude = aimAmplitude;
         else if (isWalking)
             targetAmplitude = walkAmplitude;
 

@@ -29,11 +29,30 @@ public class BulletProjectileVisual : MonoBehaviour
             transform.rotation = Quaternion.LookRotation(_dir, Vector3.up);
     }
 
+    public void InitByDirection(
+        Vector3 origin,
+        Vector3 direction,
+        float projectileSpeed,
+        float maxDistance)
+    {
+        Vector3 dir = direction.sqrMagnitude > 0.0001f
+            ? direction.normalized
+            : Vector3.forward;
+
+        Init(
+            origin,
+            origin + dir * Mathf.Max(0.01f, maxDistance),
+            projectileSpeed
+        );
+    }
+
     private void Update()
     {
-        if (!_inited) return;
+        if (!_inited)
+            return;
 
         _lifeTimer += Time.deltaTime;
+
         if (_lifeTimer >= destroyAfterSeconds)
         {
             Destroy(gameObject);

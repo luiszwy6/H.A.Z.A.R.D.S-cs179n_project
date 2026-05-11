@@ -13,45 +13,76 @@ public class BulletTimeAbility : MonoBehaviour
     [Range(0.05f, 1f)] public float timeScale = 0.25f;
     [Min(0.01f)] public float fixedDeltaScale = 1f;
 
+    [Header("Player Time")]
+    public bool playerAffectedByBulletTime = false;
+
+    [Header("Slide Auto Bullet Time")]
+    public bool autoActivateDuringSlide = false;
+    public bool stopSlideBulletTimeWhenSlideEnds = true;
+    public bool playerAffectedDuringSlideBulletTime = true;
+
     [Header("Cooldown")]
     [Min(0f)] public float toggleCooldown = 1f;
 
     [Header("Input")]
     public string actionName = "BulletTime";
 
+    [Header("Player")]
+    public PlayerMovement playerMovement;
+
     public bool IsActive { get; private set; }
     public float CurrentResource { get; private set; }
 
-    [Header("Player")]
-    public PlayerMovement playerMovement;
+    public bool ManualRequested => manualRequested;
+    public bool SlideRequested => slideRequested;
+
     private PlayerInput playerInput;
     private InputAction action;
+
     private float nextToggleTime;
     private float defaultFixedDelta;
-    private bool restoringTime;
 
-void Awake()
+    private bool manualRequested;
+    private bool slideRequested;
+    private bool slideAutoBlockedUntilSlideEnds;
+
+    private bool lastAppliedPlayerAffected;
+    private bool hasAppliedTimeScale;
+
+    private Animator playerAnimator;
+    private AnimatorUpdateMode defaultAnimatorUpdateMode;
+    private bool hasCachedAnimatorUpdateMode;
+
+    private void Awake()
     {
         playerInput = GetComponent<PlayerInput>();
+
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
+
+        CachePlayerAnimator();
 
         CurrentResource = maxResource;
         defaultFixedDelta = Time.fixedDeltaTime;
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        if (playerInput != null)
+        if (playerInput != null && playerInput.actions != null && !string.IsNullOrWhiteSpace(actionName))
         {
-            action = playerInput.actions[actionName];
-            action?.Enable();
+            action = playerInput.actions.FindAction(actionName, false);
+
             if (action != null)
+            {
+                action.Enable();
                 action.performed += OnActionPerformed;
+            }
         }
+
+        RefreshActiveState(force: true);
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
         if (action != null)
             action.performed -= OnActionPerformed;
@@ -59,96 +90,213 @@ void Awake()
         action?.Disable();
         action = null;
 
-        if (IsActive)
-            RestoreTimeScaleImmediate();
+        manualRequested = false;
+        slideRequested = false;
+        slideAutoBlockedUntilSlideEnds = false;
+
+        RestoreTimeScaleImmediate();
     }
 
-    void Update()
+    private void Update()
     {
+        UpdateSlideAutoBulletTime();
+
+        RefreshActiveState(force: false);
+
         if (IsActive)
         {
             CurrentResource -= drainPerSecond * Time.unscaledDeltaTime;
+
             if (CurrentResource <= 0f)
             {
                 CurrentResource = 0f;
-                SetActive(false, force: true);
+                manualRequested = false;
+                slideRequested = false;
+
+                if (IsPlayerSliding())
+                    slideAutoBlockedUntilSlideEnds = true;
+
+                RefreshActiveState(force: true);
+                return;
             }
+
+            RefreshActiveState(force: false);
         }
         else
         {
             CurrentResource += regenPerSecond * Time.unscaledDeltaTime;
+
             if (CurrentResource > maxResource)
                 CurrentResource = maxResource;
         }
     }
 
-    void OnActionPerformed(InputAction.CallbackContext ctx)
+    private void OnActionPerformed(InputAction.CallbackContext ctx)
     {
         if (Time.unscaledTime < nextToggleTime)
             return;
 
-        bool canEnable = CurrentResource > 0.01f;
-
-        if (!IsActive && !canEnable)
+        if (!manualRequested && CurrentResource <= 0.01f)
             return;
 
-        SetActive(!IsActive, force: false);
+        manualRequested = !manualRequested;
         nextToggleTime = Time.unscaledTime + toggleCooldown;
+
+        RefreshActiveState(force: true);
     }
 
-    void SetActive(bool active, bool force)
+    private void UpdateSlideAutoBulletTime()
     {
-        if (IsActive == active && !force)
+        if (!autoActivateDuringSlide)
+        {
+            slideRequested = false;
+            slideAutoBlockedUntilSlideEnds = false;
+            return;
+        }
+
+        bool sliding = IsPlayerSliding();
+
+        if (!sliding)
+        {
+            if (stopSlideBulletTimeWhenSlideEnds)
+                slideRequested = false;
+
+            slideAutoBlockedUntilSlideEnds = false;
+            return;
+        }
+
+        if (slideAutoBlockedUntilSlideEnds)
             return;
 
-        IsActive = active;
+        if (CurrentResource > 0.01f)
+            slideRequested = true;
+    }
 
-        if (IsActive)
+    private void RefreshActiveState(bool force)
+    {
+        bool shouldBeActive =
+            CurrentResource > 0.01f &&
+            (manualRequested || slideRequested);
+
+        if (!shouldBeActive)
         {
-            ApplyTimeScale();
+            if (IsActive || force)
+            {
+                IsActive = false;
+                RestoreTimeScaleImmediate();
+            }
+
+            return;
         }
-        else
+
+        bool playerAffected = ShouldPlayerBeAffectedNow();
+
+        if (!IsActive || force || !hasAppliedTimeScale || playerAffected != lastAppliedPlayerAffected)
         {
-            RestoreTimeScaleImmediate();
+            IsActive = true;
+            ApplyTimeScale(playerAffected);
         }
     }
 
-void ApplyTimeScale()
+    private bool ShouldPlayerBeAffectedNow()
+    {
+        if (slideRequested &&
+            autoActivateDuringSlide &&
+            playerAffectedDuringSlideBulletTime &&
+            IsPlayerSliding())
+        {
+            return true;
+        }
+
+        return playerAffectedByBulletTime;
+    }
+
+    private bool IsPlayerSliding()
+    {
+        return playerMovement != null && playerMovement.IsSlidingNow;
+    }
+
+    private void ApplyTimeScale(bool playerAffected)
     {
         float clampedScale = Mathf.Clamp(timeScale, 0.05f, 1f);
-        Time.timeScale = clampedScale;
-        Time.fixedDeltaTime = defaultFixedDelta * Mathf.Clamp(fixedDeltaScale, 0.01f, 2f) * clampedScale;
-        restoringTime = false;
 
-        if (playerMovement != null)
-        {
-            playerMovement.externalSpeedMultiplier = 1f / clampedScale;
-            Animator anim = playerMovement.GetComponentInChildren<Animator>();
-            if (anim != null)
-                anim.updateMode = AnimatorUpdateMode.UnscaledTime;
-        }
+        Time.timeScale = clampedScale;
+        Time.fixedDeltaTime =
+            defaultFixedDelta *
+            Mathf.Clamp(fixedDeltaScale, 0.01f, 2f) *
+            clampedScale;
+
+        ApplyPlayerTimeMode(playerAffected, clampedScale);
+
+        lastAppliedPlayerAffected = playerAffected;
+        hasAppliedTimeScale = true;
     }
 
-void RestoreTimeScaleImmediate()
+    private void ApplyPlayerTimeMode(bool playerAffected, float clampedScale)
+    {
+        if (playerMovement == null)
+            return;
+
+        CachePlayerAnimator();
+
+        if (playerAffected)
+        {
+            playerMovement.externalSpeedMultiplier = 1f;
+
+            if (playerAnimator != null && hasCachedAnimatorUpdateMode)
+                playerAnimator.updateMode = defaultAnimatorUpdateMode;
+
+            return;
+        }
+
+        playerMovement.externalSpeedMultiplier = 1f / clampedScale;
+
+        if (playerAnimator != null)
+            playerAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
+    }
+
+    private void RestoreTimeScaleImmediate()
     {
         Time.timeScale = 1f;
         Time.fixedDeltaTime = defaultFixedDelta;
-        restoringTime = true;
 
         if (playerMovement != null)
-        {
             playerMovement.externalSpeedMultiplier = 1f;
-            Animator anim = playerMovement.GetComponentInChildren<Animator>();
-            if (anim != null)
-                anim.updateMode = AnimatorUpdateMode.Normal;
+
+        if (playerAnimator != null && hasCachedAnimatorUpdateMode)
+            playerAnimator.updateMode = defaultAnimatorUpdateMode;
+
+        hasAppliedTimeScale = false;
+    }
+
+    private void CachePlayerAnimator()
+    {
+        if (playerMovement == null)
+            return;
+
+        if (playerAnimator == null)
+            playerAnimator = playerMovement.GetComponentInChildren<Animator>();
+
+        if (playerAnimator != null && !hasCachedAnimatorUpdateMode)
+        {
+            defaultAnimatorUpdateMode = playerAnimator.updateMode;
+            hasCachedAnimatorUpdateMode = true;
         }
     }
 
-    void OnApplicationFocus(bool hasFocus)
+    private void OnApplicationFocus(bool hasFocus)
     {
-        if (!hasFocus && IsActive)
+        if (hasFocus)
+            return;
+
+        manualRequested = false;
+        slideRequested = false;
+        slideAutoBlockedUntilSlideEnds = false;
+
+        if (IsActive)
         {
-            SetActive(false, force: true);
+            IsActive = false;
+            RestoreTimeScaleImmediate();
         }
     }
 }
