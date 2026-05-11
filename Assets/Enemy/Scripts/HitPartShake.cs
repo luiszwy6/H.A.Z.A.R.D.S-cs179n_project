@@ -59,6 +59,11 @@ public class HitPartShakeReaction : MonoBehaviour
     [SerializeField] private float duration = 0.12f;
     [SerializeField] private float fadeOut = 0.06f;
 
+    [Header("Child Isolation")]
+    [SerializeField] private bool isolateChildrenFromShake = true;
+    [SerializeField] private bool isolateChildPositions = true;
+    [SerializeField] private bool isolateChildRotations = true;
+
     private Transform activeBone;
     private Vector3 baseLocalPos;
     private Quaternion baseLocalRot;
@@ -73,6 +78,10 @@ public class HitPartShakeReaction : MonoBehaviour
     private float seedB;
     private bool playing;
 
+    private Transform[] isolatedChildren;
+    private Vector3[] isolatedChildWorldPositions;
+    private Quaternion[] isolatedChildWorldRotations;
+
     private void OnDisable()
     {
         Restore();
@@ -86,6 +95,7 @@ public class HitPartShakeReaction : MonoBehaviour
         if (activeBone == null)
         {
             playing = false;
+            ClearIsolatedChildrenWorldPose();
             return;
         }
 
@@ -128,13 +138,18 @@ public class HitPartShakeReaction : MonoBehaviour
             rotOff = Quaternion.Euler(euler);
         }
 
+        CacheDirectChildrenWorldPose();
+
         activeBone.localPosition = baseLocalPos + posOff;
         activeBone.localRotation = baseLocalRot * rotOff;
+
+        RestoreDirectChildrenWorldPose();
 
         if (timer >= total)
         {
             playing = false;
             Restore();
+            ClearIsolatedChildrenWorldPose();
         }
     }
 
@@ -245,8 +260,71 @@ public class HitPartShakeReaction : MonoBehaviour
         if (activeBone == null)
             return;
 
+        CacheDirectChildrenWorldPose();
+
         activeBone.localPosition = baseLocalPos;
         activeBone.localRotation = baseLocalRot;
+
+        RestoreDirectChildrenWorldPose();
+    }
+
+    private void CacheDirectChildrenWorldPose()
+    {
+        ClearIsolatedChildrenWorldPose();
+
+        if (!isolateChildrenFromShake)
+            return;
+
+        if (activeBone == null)
+            return;
+
+        int childCount = activeBone.childCount;
+
+        if (childCount <= 0)
+            return;
+
+        isolatedChildren = new Transform[childCount];
+        isolatedChildWorldPositions = new Vector3[childCount];
+        isolatedChildWorldRotations = new Quaternion[childCount];
+
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child = activeBone.GetChild(i);
+
+            isolatedChildren[i] = child;
+            isolatedChildWorldPositions[i] = child.position;
+            isolatedChildWorldRotations[i] = child.rotation;
+        }
+    }
+
+    private void RestoreDirectChildrenWorldPose()
+    {
+        if (!isolateChildrenFromShake)
+            return;
+
+        if (isolatedChildren == null)
+            return;
+
+        for (int i = 0; i < isolatedChildren.Length; i++)
+        {
+            Transform child = isolatedChildren[i];
+
+            if (child == null)
+                continue;
+
+            if (isolateChildPositions)
+                child.position = isolatedChildWorldPositions[i];
+
+            if (isolateChildRotations)
+                child.rotation = isolatedChildWorldRotations[i];
+        }
+    }
+
+    private void ClearIsolatedChildrenWorldPose()
+    {
+        isolatedChildren = null;
+        isolatedChildWorldPositions = null;
+        isolatedChildWorldRotations = null;
     }
 
     private bool ShouldUseCollider(Collider col)
