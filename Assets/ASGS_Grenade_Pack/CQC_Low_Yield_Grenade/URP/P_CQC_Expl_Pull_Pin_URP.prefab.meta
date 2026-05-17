@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: eabda622418407c4e9f5544cddc8fce3
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/URP/P_CQC_Expl_Pull_Pin_URP.prefab
+  uploadId: 693428

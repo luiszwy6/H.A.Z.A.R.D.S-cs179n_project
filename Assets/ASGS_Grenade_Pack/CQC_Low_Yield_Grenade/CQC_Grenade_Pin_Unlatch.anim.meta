@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: db07633ed8e3a094691eb6d48b671c24
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/CQC_Grenade_Pin_Unlatch.anim
+  uploadId: 693428

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6e42810d94ba36e40bc12ea98c39e7e4
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Scenes/SkyandFogSettingsProfile.asset
+  uploadId: 693428

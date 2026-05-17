@@ -230,6 +230,24 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Throw",
+                    "type": "Button",
+                    "id": "8278aeab-f17a-4f58-96dd-a0f233e56f54",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "ChangeGrenade",
+                    "type": "Button",
+                    "id": "325f1001-39f9-42d8-97c7-29015f1cd021",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -725,6 +743,28 @@
                     "processors": "",
                     "groups": "",
                     "action": "Scope",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b8699ce5-3b18-4d77-9e2f-906a78233e45",
+                    "path": "<Keyboard>/g",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Throw",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4c063b3f-b7db-4af7-8a43-d0b98e0349bd",
+                    "path": "<Keyboard>/t",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ChangeGrenade",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

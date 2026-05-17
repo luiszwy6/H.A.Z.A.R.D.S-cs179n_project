@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1f5786c1397307b45b1059771da65f01
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/Mats_Textures/M_CQC_Explosive_Grenade_URP_MetSmooth.mat
+  uploadId: 693428

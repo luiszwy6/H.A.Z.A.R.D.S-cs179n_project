@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 25cff0a0e0810a3468b0b37cac29352f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/URP/P_Custom_Explosion.prefab
+  uploadId: 693428

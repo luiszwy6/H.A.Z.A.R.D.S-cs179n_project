@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: d239c150716da2e4fb7be5f88e386399
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Smoke_Grenade/HDRP/P_Smoke_Grenade.prefab
+  uploadId: 693428
