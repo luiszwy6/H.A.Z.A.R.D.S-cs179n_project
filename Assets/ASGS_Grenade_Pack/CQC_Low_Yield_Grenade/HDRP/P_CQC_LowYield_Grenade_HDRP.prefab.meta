@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a93df611ca35f6642bbbaaaf8167b225
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/HDRP/P_CQC_LowYield_Grenade_HDRP.prefab
+  uploadId: 693428

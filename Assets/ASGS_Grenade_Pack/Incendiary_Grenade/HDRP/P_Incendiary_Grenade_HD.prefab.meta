@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: deb5a706698d89547b369e7fc6a2589c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Incendiary_Grenade/HDRP/P_Incendiary_Grenade_HD.prefab
+  uploadId: 693428

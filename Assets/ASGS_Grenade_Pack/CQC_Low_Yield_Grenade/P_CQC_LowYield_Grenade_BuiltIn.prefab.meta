@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 7a580b3319f6a964b94590a22a3cc179
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/P_CQC_LowYield_Grenade_BuiltIn.prefab
+  uploadId: 693428

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d4c6231703971974384de8e1596790f0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/M_Smoke_Transparent_2.mat
+  uploadId: 693428

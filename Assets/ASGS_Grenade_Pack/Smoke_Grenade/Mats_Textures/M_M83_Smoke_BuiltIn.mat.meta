@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 68b9e2fe9ea72d34db63e176f1396d49
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Smoke_Grenade/Mats_Textures/M_M83_Smoke_BuiltIn.mat
+  uploadId: 693428

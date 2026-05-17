@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: dca0fd2c722e0f549bad7f01072490f2
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Scenes/Grenade_Test_Scene_HDRP.unity
+  uploadId: 693428

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: c246b6c417bc0df4f8a30d2ddc207a3b
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/HDRP/P_CQC_Expl_Pull_Pin_HDRP.prefab
+  uploadId: 693428

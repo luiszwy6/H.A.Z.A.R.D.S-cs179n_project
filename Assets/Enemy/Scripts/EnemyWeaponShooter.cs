@@ -10,6 +10,7 @@ public class EnemyWeaponShooter : MonoBehaviour
     [SerializeField] private Animator enemyAnimator;
     [SerializeField] private EnemyAnimatorParameterDriver enemyAnimatorDriver;
     [SerializeField] private EnemyWeaponSettings enemyWeaponSettings;
+    [SerializeField] private AR_DamageSetting damageSetting;
     [SerializeField] private WeaponEffects weaponEffects;
 
     [Header("Projectile - Real Logic")]
@@ -84,6 +85,12 @@ public class EnemyWeaponShooter : MonoBehaviour
         if (enemyWeaponSettings == null)
             enemyWeaponSettings = GetComponentInChildren<EnemyWeaponSettings>(true);
 
+        if (damageSetting == null)
+            damageSetting = GetComponent<AR_DamageSetting>();
+
+        if (damageSetting == null)
+            damageSetting = GetComponentInChildren<AR_DamageSetting>(true);
+
         if (weaponEffects == null)
             weaponEffects = GetComponentInChildren<WeaponEffects>(true);
     }
@@ -152,6 +159,7 @@ public class EnemyWeaponShooter : MonoBehaviour
         dir = ApplySpread(dir, GetRandomSpreadAngle());
 
         BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
+
         bullet.Init(
             origin,
             dir,
@@ -161,6 +169,9 @@ public class EnemyWeaponShooter : MonoBehaviour
             bulletHitMask,
             projectileTriggerInteraction
         );
+
+        if (damageSetting != null)
+            damageSetting.ApplyToProjectile(bullet);
 
         SpawnVisualProjectile(origin, dir);
 

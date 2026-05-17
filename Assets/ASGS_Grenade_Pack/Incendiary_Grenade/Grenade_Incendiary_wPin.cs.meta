@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: b6cef0f03d50e48489ef8cde58d0a1fb
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Incendiary_Grenade/Grenade_Incendiary_wPin.cs
+  uploadId: 693428

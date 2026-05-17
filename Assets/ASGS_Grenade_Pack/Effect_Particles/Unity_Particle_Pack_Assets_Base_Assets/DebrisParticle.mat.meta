@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 72815344e9e9c7446895e130936932d7
+timeCreated: 1471611776
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Unity_Particle_Pack_Assets_Base_Assets/DebrisParticle.mat
+  uploadId: 693428

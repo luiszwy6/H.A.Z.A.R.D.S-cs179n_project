@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: f0dfec0ccccb74246a97580893462298
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Smoke_Grenade/URP/P_Smoke_Grenade_Green_URP.prefab
+  uploadId: 693428

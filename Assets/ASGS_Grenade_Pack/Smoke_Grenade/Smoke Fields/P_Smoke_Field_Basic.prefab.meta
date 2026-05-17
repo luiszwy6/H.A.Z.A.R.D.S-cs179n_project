@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 3b7237bd83f25544a8e8f80f0aa6a12c
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Smoke_Grenade/Smoke Fields/P_Smoke_Field_Basic.prefab
+  uploadId: 693428

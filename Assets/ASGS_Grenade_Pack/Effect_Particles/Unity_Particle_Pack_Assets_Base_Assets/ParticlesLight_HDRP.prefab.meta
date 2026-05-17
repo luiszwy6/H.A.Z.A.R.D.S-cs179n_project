@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 4ad21d57fc771204ea3b9f5c395b13cb
+timeCreated: 1472572134
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Unity_Particle_Pack_Assets_Base_Assets/ParticlesLight_HDRP.prefab
+  uploadId: 693428

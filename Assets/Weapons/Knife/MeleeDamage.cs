@@ -5,10 +5,24 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class MeleeDamage : MonoBehaviour
 {
-    [Header("Damage Hitbox")]
+    public enum MeleeDamageMode
+    {
+        Normal,
+        BackStab
+    }
+
+    [Header("Damage Mode")]
+    [SerializeField] private MeleeDamageMode currentDamageMode = MeleeDamageMode.Normal;
+    [SerializeField] private bool resetModeToNormalOnClose = true;
+
+    [Header("Normal Damage Hitbox")]
     [SerializeField] private Collider damageHitbox;
     [SerializeField] private bool disableHitboxColliderOnAwake = true;
     [SerializeField] private bool enableHitboxColliderDuringDamageWindow = true;
+
+    [Header("BackStab Damage Hitbox")]
+    [SerializeField] private Collider backStabDamageHitbox;
+    [SerializeField] private bool useSeparateBackStabHitbox = true;
 
     [Header("Find Child Hitbox")]
     [SerializeField] private bool includeInactiveColliders = true;
@@ -22,7 +36,7 @@ public class MeleeDamage : MonoBehaviour
     [SerializeField] private Transform ownerRoot;
     [SerializeField] private bool ignoreOwnerRoot = true;
 
-    [Header("Damage Payload")]
+    [Header("Normal Damage Payload")]
     [SerializeField] private float Base_dmg = 25f;
 
     [Range(0, 2)]
@@ -30,10 +44,36 @@ public class MeleeDamage : MonoBehaviour
 
     [SerializeField] private float knockbackValue = 0f;
 
+    [Header("BackStab Damage Payload")]
+    [SerializeField] private float backStabBase_dmg = 60f;
+
+    [Range(0, 2)]
+    [SerializeField] private int backStabArmoPierLevel = 0;
+
+    [SerializeField] private float backStabKnockbackValue = 0f;
+
+    [Header("Runtime Damage")]
+    [SerializeField] private float runtimeDamageMultiplier = 1f;
+    [SerializeField] private bool resetRuntimeDamageMultiplierOnClose = true;
+
     [Header("Hit Rules")]
     [SerializeField] private bool hitEachEnemyOncePerWindow = true;
     [SerializeField] private bool playHitPartShake = true;
+    [SerializeField] private bool playEnemyHitAudio = true;
     [SerializeField] private bool searchInParents = true;
+
+    [Header("Blood Effect")]
+    [SerializeField] private bool playMeleeBlood = true;
+    [SerializeField] private bool requireAppliedDamageForBlood = true;
+    [SerializeField] private GameObject normalMeleeBloodPrefab;
+    [SerializeField] private GameObject backStabBloodPrefab;
+    [SerializeField] private bool alignBloodToHitNormal = true;
+    [SerializeField] private Vector3 bloodRotationOffsetEuler;
+    [SerializeField] private float normalMeleeBloodScale = 1f;
+    [SerializeField] private float backStabBloodScale = 1f;
+    [SerializeField] private bool parentBloodToHitCollider = false;
+    [SerializeField] private bool autoDestroySpawnedBlood = false;
+    [SerializeField] private float bloodDestroyDelay = 3f;
 
     [Header("Damage Window")]
     [SerializeField] private bool damageWindowActiveOnEnable = false;
@@ -41,6 +81,7 @@ public class MeleeDamage : MonoBehaviour
 
     [Header("Debug")]
     [SerializeField] private bool logHit = false;
+    [SerializeField] private bool logBlood = false;
     [SerializeField] private bool drawDebug = false;
     [SerializeField] private Color debugColor = Color.red;
     [SerializeField] private float debugDuration = 0.1f;
@@ -48,6 +89,10 @@ public class MeleeDamage : MonoBehaviour
     private readonly HashSet<EnemyHealth> hitEnemiesThisWindow = new HashSet<EnemyHealth>();
     private Coroutine damageWindowRoutine;
     private bool damageWindowActive;
+
+    public MeleeDamageMode CurrentDamageMode => currentDamageMode;
+    public bool IsBackStabMode => currentDamageMode == MeleeDamageMode.BackStab;
+    public float RuntimeDamageMultiplier => Mathf.Max(0f, runtimeDamageMultiplier);
 
     private void Reset()
     {
@@ -63,8 +108,8 @@ public class MeleeDamage : MonoBehaviour
         if (damageHitbox == null)
             FindChildDamageHitbox();
 
-        if (disableHitboxColliderOnAwake && damageHitbox != null)
-            damageHitbox.enabled = false;
+        if (disableHitboxColliderOnAwake)
+            DisableAllDamageHitboxes();
     }
 
     private void OnEnable()
@@ -103,13 +148,40 @@ public class MeleeDamage : MonoBehaviour
         }
     }
 
+    public void SetDamageMode(MeleeDamageMode mode)
+    {
+        currentDamageMode = mode;
+
+        if (damageWindowActive)
+            ApplyActiveHitboxColliderState();
+    }
+
+    public void UseNormalDamage()
+    {
+        SetDamageMode(MeleeDamageMode.Normal);
+    }
+
+    public void UseBackStabDamage()
+    {
+        SetDamageMode(MeleeDamageMode.BackStab);
+    }
+
+    public void SetRuntimeDamageMultiplier(float multiplier)
+    {
+        runtimeDamageMultiplier = Mathf.Max(0f, multiplier);
+    }
+
+    public void ResetRuntimeDamageMultiplier()
+    {
+        runtimeDamageMultiplier = 1f;
+    }
+
     public void OpenDamageWindow()
     {
         damageWindowActive = true;
         hitEnemiesThisWindow.Clear();
 
-        if (enableHitboxColliderDuringDamageWindow && damageHitbox != null)
-            damageHitbox.enabled = true;
+        ApplyActiveHitboxColliderState();
     }
 
     public void CloseDamageWindow()
@@ -123,8 +195,13 @@ public class MeleeDamage : MonoBehaviour
             damageWindowRoutine = null;
         }
 
-        if (enableHitboxColliderDuringDamageWindow && damageHitbox != null)
-            damageHitbox.enabled = false;
+        DisableAllDamageHitboxes();
+
+        if (resetRuntimeDamageMultiplierOnClose)
+            ResetRuntimeDamageMultiplier();
+
+        if (resetModeToNormalOnClose)
+            currentDamageMode = MeleeDamageMode.Normal;
     }
 
     public void OpenDamageWindowForDefaultDuration()
@@ -165,10 +242,12 @@ public class MeleeDamage : MonoBehaviour
 
     private void ProcessDamageHitbox()
     {
-        if (damageHitbox == null)
+        Collider activeHitbox = GetActiveDamageHitbox();
+
+        if (activeHitbox == null)
             return;
 
-        Collider[] hits = QueryHitboxOverlap();
+        Collider[] hits = QueryHitboxOverlap(activeHitbox);
 
         if (hits == null || hits.Length == 0)
             return;
@@ -180,7 +259,7 @@ public class MeleeDamage : MonoBehaviour
             if (hitCollider == null)
                 continue;
 
-            if (hitCollider == damageHitbox)
+            if (hitCollider == activeHitbox)
                 continue;
 
             if (ShouldIgnoreCollider(hitCollider))
@@ -194,14 +273,16 @@ public class MeleeDamage : MonoBehaviour
             if (hitEachEnemyOncePerWindow && hitEnemiesThisWindow.Contains(enemyHealth))
                 continue;
 
-            if (!TryBuildRaycastHit(hitCollider, out RaycastHit hit))
+            if (!TryBuildRaycastHit(activeHitbox, hitCollider, out RaycastHit hit))
                 continue;
+
+            float finalBaseDamage = GetActiveBaseDamage() * RuntimeDamageMultiplier;
 
             bool enemyHandled = enemyHealth.TryApplyBulletDamage(
                 hit,
-                Mathf.Max(0f, Base_dmg),
-                Mathf.Clamp(ArmoPierLevel, 0, 2),
-                Mathf.Max(0f, knockbackValue),
+                finalBaseDamage,
+                GetActiveArmorPierceLevel(),
+                GetActiveKnockbackValue(),
                 out float appliedDamage,
                 out bool triggeredKnockback
             );
@@ -209,30 +290,165 @@ public class MeleeDamage : MonoBehaviour
             if (!enemyHandled)
                 continue;
 
+            bool fatal = enemyHealth.IsDead;
+
             hitEnemiesThisWindow.Add(enemyHealth);
 
             if (playHitPartShake)
                 TryPlayHitPartShake(hitCollider);
 
+            if (playMeleeBlood)
+                TrySpawnMeleeBlood(hitCollider, hit.point, hit.normal, appliedDamage);
+
+            if (playEnemyHitAudio)
+                TryPlayEnemyMeleeHitAudio(hitCollider, hit.point, appliedDamage, fatal);
+
             if (logHit)
             {
                 Debug.Log(
-                    $"[MeleeDamage] Hit enemy={enemyHealth.name}, Hitbox={hitCollider.name}, Base_dmg={Base_dmg}, ArmoPierLevel={ArmoPierLevel}, Knockback={knockbackValue}, Applied={appliedDamage}, KnockbackTriggered={triggeredKnockback}",
+                    $"[MeleeDamage] Mode={currentDamageMode}, Hit enemy={enemyHealth.name}, Hitbox={hitCollider.name}, BaseDamage={GetActiveBaseDamage()}, RuntimeMultiplier={RuntimeDamageMultiplier}, FinalBaseDamage={finalBaseDamage}, ArmoPierLevel={GetActiveArmorPierceLevel()}, Knockback={GetActiveKnockbackValue()}, Applied={appliedDamage}, KnockbackTriggered={triggeredKnockback}, Fatal={fatal}",
                     this
                 );
             }
 
             if (drawDebug)
-                Debug.DrawLine(GetHitboxCenter(), hit.point, debugColor, debugDuration, false);
+                Debug.DrawLine(GetHitboxCenter(activeHitbox), hit.point, debugColor, debugDuration, false);
         }
     }
 
-    private Collider[] QueryHitboxOverlap()
+    private Collider GetActiveDamageHitbox()
     {
-        if (damageHitbox == null)
+        if (currentDamageMode == MeleeDamageMode.BackStab &&
+            useSeparateBackStabHitbox &&
+            backStabDamageHitbox != null)
+        {
+            return backStabDamageHitbox;
+        }
+
+        return damageHitbox;
+    }
+
+    private float GetActiveBaseDamage()
+    {
+        if (currentDamageMode == MeleeDamageMode.BackStab)
+            return Mathf.Max(0f, backStabBase_dmg);
+
+        return Mathf.Max(0f, Base_dmg);
+    }
+
+    private int GetActiveArmorPierceLevel()
+    {
+        if (currentDamageMode == MeleeDamageMode.BackStab)
+            return Mathf.Clamp(backStabArmoPierLevel, 0, 2);
+
+        return Mathf.Clamp(ArmoPierLevel, 0, 2);
+    }
+
+    private float GetActiveKnockbackValue()
+    {
+        if (currentDamageMode == MeleeDamageMode.BackStab)
+            return Mathf.Max(0f, backStabKnockbackValue);
+
+        return Mathf.Max(0f, knockbackValue);
+    }
+
+    private GameObject GetActiveBloodPrefab()
+    {
+        if (currentDamageMode == MeleeDamageMode.BackStab && backStabBloodPrefab != null)
+            return backStabBloodPrefab;
+
+        return normalMeleeBloodPrefab;
+    }
+
+    private float GetActiveBloodScale()
+    {
+        if (currentDamageMode == MeleeDamageMode.BackStab)
+            return Mathf.Max(0.001f, backStabBloodScale);
+
+        return Mathf.Max(0.001f, normalMeleeBloodScale);
+    }
+
+    private void TrySpawnMeleeBlood(
+        Collider hitCollider,
+        Vector3 hitPoint,
+        Vector3 hitNormal,
+        float appliedDamage)
+    {
+        if (hitCollider == null)
+            return;
+
+        if (requireAppliedDamageForBlood && appliedDamage <= 0f)
+            return;
+
+        GameObject prefab = GetActiveBloodPrefab();
+
+        if (prefab == null)
+            return;
+
+        Quaternion rotation = ResolveBloodRotation(hitNormal);
+        Transform parent = parentBloodToHitCollider ? hitCollider.transform : null;
+
+        GameObject instance = Instantiate(prefab, hitPoint, rotation, parent);
+        instance.transform.localScale = Vector3.one * GetActiveBloodScale();
+
+        if (autoDestroySpawnedBlood)
+            Destroy(instance, Mathf.Max(0.01f, bloodDestroyDelay));
+
+        if (logBlood)
+        {
+            Debug.Log(
+                $"[MeleeDamage] Blood spawned. Mode={currentDamageMode}, Prefab={prefab.name}, Hitbox={hitCollider.name}, AppliedDamage={appliedDamage}",
+                this
+            );
+        }
+    }
+
+    private Quaternion ResolveBloodRotation(Vector3 hitNormal)
+    {
+        Quaternion baseRotation = transform.rotation;
+
+        if (alignBloodToHitNormal && hitNormal.sqrMagnitude > 0.0001f)
+        {
+            Vector3 forward = hitNormal.normalized;
+            Vector3 up = Mathf.Abs(Vector3.Dot(forward, Vector3.up)) > 0.98f
+                ? Vector3.right
+                : Vector3.up;
+
+            baseRotation = Quaternion.LookRotation(forward, up);
+        }
+
+        return baseRotation * Quaternion.Euler(bloodRotationOffsetEuler);
+    }
+
+    private void ApplyActiveHitboxColliderState()
+    {
+        if (!enableHitboxColliderDuringDamageWindow)
+            return;
+
+        Collider activeHitbox = GetActiveDamageHitbox();
+
+        if (damageHitbox != null)
+            damageHitbox.enabled = activeHitbox == damageHitbox;
+
+        if (backStabDamageHitbox != null && backStabDamageHitbox != damageHitbox)
+            backStabDamageHitbox.enabled = activeHitbox == backStabDamageHitbox;
+    }
+
+    private void DisableAllDamageHitboxes()
+    {
+        if (damageHitbox != null)
+            damageHitbox.enabled = false;
+
+        if (backStabDamageHitbox != null && backStabDamageHitbox != damageHitbox)
+            backStabDamageHitbox.enabled = false;
+    }
+
+    private Collider[] QueryHitboxOverlap(Collider activeHitbox)
+    {
+        if (activeHitbox == null)
             return null;
 
-        BoxCollider box = damageHitbox as BoxCollider;
+        BoxCollider box = activeHitbox as BoxCollider;
 
         if (box != null)
         {
@@ -249,7 +465,7 @@ public class MeleeDamage : MonoBehaviour
             );
         }
 
-        SphereCollider sphere = damageHitbox as SphereCollider;
+        SphereCollider sphere = activeHitbox as SphereCollider;
 
         if (sphere != null)
         {
@@ -265,7 +481,7 @@ public class MeleeDamage : MonoBehaviour
             );
         }
 
-        CapsuleCollider capsule = damageHitbox as CapsuleCollider;
+        CapsuleCollider capsule = activeHitbox as CapsuleCollider;
 
         if (capsule != null)
         {
@@ -285,7 +501,7 @@ public class MeleeDamage : MonoBehaviour
             );
         }
 
-        Bounds bounds = damageHitbox.bounds;
+        Bounds bounds = activeHitbox.bounds;
 
         return Physics.OverlapBox(
             bounds.center,
@@ -296,14 +512,14 @@ public class MeleeDamage : MonoBehaviour
         );
     }
 
-    private bool TryBuildRaycastHit(Collider targetCollider, out RaycastHit hit)
+    private bool TryBuildRaycastHit(Collider activeHitbox, Collider targetCollider, out RaycastHit hit)
     {
         hit = default;
 
-        if (targetCollider == null)
+        if (activeHitbox == null || targetCollider == null)
             return false;
 
-        Vector3 source = GetHitboxCenter();
+        Vector3 source = GetHitboxCenter(activeHitbox);
         Vector3 target = targetCollider.bounds.center;
         Vector3 dir = target - source;
 
@@ -315,7 +531,7 @@ public class MeleeDamage : MonoBehaviour
 
         dir.Normalize();
 
-        float hitboxRadius = GetApproxHitboxRadius();
+        float hitboxRadius = GetApproxHitboxRadius(activeHitbox);
         float targetRadius = targetCollider.bounds.extents.magnitude;
         float distance = Vector3.Distance(source, target) + hitboxRadius + targetRadius + 0.5f;
 
@@ -358,6 +574,25 @@ public class MeleeDamage : MonoBehaviour
             return;
 
         shake.PlayHurtbox(hitCollider);
+    }
+
+    private void TryPlayEnemyMeleeHitAudio(
+        Collider hitCollider,
+        Vector3 hitPoint,
+        float appliedDamage,
+        bool fatal)
+    {
+        if (hitCollider == null)
+            return;
+
+        EnemyAudioFeedback audioFeedback = searchInParents
+            ? hitCollider.GetComponentInParent<EnemyAudioFeedback>()
+            : hitCollider.GetComponent<EnemyAudioFeedback>();
+
+        if (audioFeedback == null)
+            return;
+
+        audioFeedback.PlayMeleeHit(hitCollider, hitPoint, appliedDamage, currentDamageMode, fatal);
     }
 
     private EnemyHealth GetEnemyHealthFromCollider(Collider col)
@@ -406,35 +641,35 @@ public class MeleeDamage : MonoBehaviour
         return (mask.value & (1 << layer)) != 0;
     }
 
-    private Vector3 GetHitboxCenter()
+    private Vector3 GetHitboxCenter(Collider activeHitbox)
     {
-        if (damageHitbox == null)
+        if (activeHitbox == null)
             return transform.position;
 
-        BoxCollider box = damageHitbox as BoxCollider;
+        BoxCollider box = activeHitbox as BoxCollider;
 
         if (box != null)
             return box.transform.TransformPoint(box.center);
 
-        SphereCollider sphere = damageHitbox as SphereCollider;
+        SphereCollider sphere = activeHitbox as SphereCollider;
 
         if (sphere != null)
             return sphere.transform.TransformPoint(sphere.center);
 
-        CapsuleCollider capsule = damageHitbox as CapsuleCollider;
+        CapsuleCollider capsule = activeHitbox as CapsuleCollider;
 
         if (capsule != null)
             return capsule.transform.TransformPoint(capsule.center);
 
-        return damageHitbox.bounds.center;
+        return activeHitbox.bounds.center;
     }
 
-    private float GetApproxHitboxRadius()
+    private float GetApproxHitboxRadius(Collider activeHitbox)
     {
-        if (damageHitbox == null)
+        if (activeHitbox == null)
             return 0.1f;
 
-        return Mathf.Max(0.01f, damageHitbox.bounds.extents.magnitude);
+        return Mathf.Max(0.01f, activeHitbox.bounds.extents.magnitude);
     }
 
     private void GetCapsuleWorldPoints(

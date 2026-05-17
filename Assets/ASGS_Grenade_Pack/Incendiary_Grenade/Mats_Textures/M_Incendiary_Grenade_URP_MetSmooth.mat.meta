@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a6b6900371f88e04388dbf1f90f10bee
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Incendiary_Grenade/Mats_Textures/M_Incendiary_Grenade_URP_MetSmooth.mat
+  uploadId: 693428

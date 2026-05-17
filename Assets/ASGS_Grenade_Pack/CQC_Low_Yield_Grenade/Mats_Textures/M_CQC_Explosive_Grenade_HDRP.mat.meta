@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3bc713ee612fd6e47af445f87a07eb32
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/Mats_Textures/M_CQC_Explosive_Grenade_HDRP.mat
+  uploadId: 693428
