@@ -19,7 +19,11 @@ public partial class EnemyShootAtTargetAction : Action
 
     [SerializeField] public bool RequireSensorCanSeeTarget = true;
 
+    [Header("Attack Adapter")]
+    [SerializeField] public bool PreferMeleeAttacker = false;
+
     private EnemyWeaponShooter shooter;
+    private EnemyMeleeAttacker meleeAttacker;
     private EnemySensor sensor;
 
     protected override Status OnStart()
@@ -28,9 +32,10 @@ public partial class EnemyShootAtTargetAction : Action
             return Status.Failure;
 
         shooter = Self.Value.GetComponentInChildren<EnemyWeaponShooter>(true);
+        meleeAttacker = Self.Value.GetComponentInChildren<EnemyMeleeAttacker>(true);
         sensor = Self.Value.GetComponent<EnemySensor>();
 
-        if (shooter == null)
+        if (shooter == null && meleeAttacker == null)
             return Status.Failure;
 
         return Status.Running;
@@ -38,10 +43,10 @@ public partial class EnemyShootAtTargetAction : Action
 
     protected override Status OnUpdate()
     {
-        if (shooter == null)
+        if (Target == null || Target.Value == null)
             return Status.Failure;
 
-        if (Target == null || Target.Value == null)
+        if (shooter == null && meleeAttacker == null)
             return Status.Failure;
 
         if (RequireSensorCanSeeTarget && sensor != null)
@@ -50,7 +55,7 @@ public partial class EnemyShootAtTargetAction : Action
 
             if (!sensor.CanSeeTarget)
             {
-                shooter.ForceClearRuntimeState();
+                ForceClearAttackRuntimeState();
                 return Status.Failure;
             }
         }
@@ -58,14 +63,35 @@ public partial class EnemyShootAtTargetAction : Action
         float heightOffset = TargetHeightOffset != null ? TargetHeightOffset.Value : 1.3f;
         Vector3 targetPoint = Target.Value.transform.position + Vector3.up * heightOffset;
 
-        shooter.ShootAt(targetPoint);
+        bool usedAttack = false;
 
-        return Status.Success;
+        if (PreferMeleeAttacker && meleeAttacker != null)
+        {
+            usedAttack = meleeAttacker.ShootAt(targetPoint);
+        }
+        else if (shooter != null)
+        {
+            usedAttack = shooter.ShootAt(targetPoint);
+        }
+        else if (meleeAttacker != null)
+        {
+            usedAttack = meleeAttacker.ShootAt(targetPoint);
+        }
+
+        return usedAttack ? Status.Success : Status.Failure;
     }
 
     protected override void OnEnd()
     {
+        ForceClearAttackRuntimeState();
+    }
+
+    private void ForceClearAttackRuntimeState()
+    {
         if (shooter != null)
             shooter.ForceClearRuntimeState();
+
+        if (meleeAttacker != null)
+            meleeAttacker.ForceClearRuntimeState();
     }
 }

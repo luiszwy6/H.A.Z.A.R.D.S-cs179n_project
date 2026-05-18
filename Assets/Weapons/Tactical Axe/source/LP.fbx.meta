@@ -1,12 +1,5 @@
 fileFormatVersion: 2
-guid: c1e0b54e00937054d8479a8deb005fbd
-AssetOrigin:
-  serializedVersion: 1
-  productId: 283665
-  packageName: Low Poly ShotGun Weapon Pack 1
-  packageVersion: 1.0
-  assetPath: Assets/Low Poly AR Weapon Pack 1/Models/Weapons/ShotGun_E.fbx
-  uploadId: 724253
+guid: 85e3d11d6418a2846b26324787069cb9
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
@@ -14,8 +7,8 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
-      name: Modern Weapon Pack Vol.01
-    second: {fileID: 2100000, guid: 2a461ee17a7f0b8449bd2c6e34b0e286, type: 2}
+      name: "\u0422\u043E\u043F\u043E\u0440"
+    second: {fileID: 2100000, guid: 7907a662044b4f54fbb4759756c24fe4, type: 2}
   materials:
     materialImportMode: 1
     materialName: 0
@@ -80,7 +73,7 @@ ModelImporter:
     secondaryUVMinLightmapResolution: 40
     secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
-    useFileScale: 0
+    useFileScale: 1
     strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
