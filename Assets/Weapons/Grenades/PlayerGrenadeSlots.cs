@@ -227,6 +227,32 @@ public class PlayerGrenadeSlots : MonoBehaviour
         UpdateAnimatorGrenadeBools(CurrentSlot);
     }
 
+    public bool AddGrenades(GrenadeType grenadeType, int amount, bool autoEquipIfNeeded)
+    {
+        if (amount <= 0)
+            return false;
+
+        if (grenadeSlots == null || grenadeSlots.Count == 0)
+            return false;
+
+        GrenadeSlot slot = FindSlotByType(grenadeType);
+        if (slot == null)
+            return false;
+
+        if (slot.count >= 0)
+            slot.count += amount;
+
+        if (autoEquipIfNeeded)
+        {
+            if (!HasUsableCurrentGrenade)
+                EquipGrenade(grenadeSlots.IndexOf(slot), true);
+            else
+                UpdateAnimatorGrenadeBools(CurrentSlot);
+        }
+
+        return true;
+    }
+
     public int GetCurrentGrenadeCount()
     {
         GrenadeSlot slot = CurrentSlot;
@@ -395,6 +421,24 @@ public class PlayerGrenadeSlots : MonoBehaviour
             return false;
 
         return slot.count < 0 || slot.count > 0;
+    }
+
+    private GrenadeSlot FindSlotByType(GrenadeType grenadeType)
+    {
+        if (grenadeSlots == null)
+            return null;
+
+        for (int i = 0; i < grenadeSlots.Count; i++)
+        {
+            GrenadeSlot slot = grenadeSlots[i];
+            if (slot == null)
+                continue;
+
+            if (slot.grenadeType == grenadeType)
+                return slot;
+        }
+
+        return null;
     }
 
     private int GetFirstUsableGrenadeIndex(int preferredIndex)
