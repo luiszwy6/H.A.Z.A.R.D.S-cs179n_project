@@ -8,7 +8,8 @@ public class EnemyWeaponAnimatorState : MonoBehaviour
         AssaultRifle,
         ShotGun,
         Sniper,
-        Pistol
+        Pistol,
+        ShieldAxe
     }
 
     [Header("Weapon Type")]
@@ -25,6 +26,8 @@ public class EnemyWeaponAnimatorState : MonoBehaviour
     [SerializeField] private string shotGunBoolName = "ShotGun";
     [SerializeField] private string sniperBoolName = "Sniper";
     [SerializeField] private string pistolBoolName = "Pistol";
+    [SerializeField] private string shieldAxeBoolName = "ShieldAxe";
+    private int shieldAxeBoolHash;
 
     private int assaultRifleBoolHash;
     private int shotGunBoolHash;
@@ -64,6 +67,7 @@ public class EnemyWeaponAnimatorState : MonoBehaviour
         shotGunBoolHash = Animator.StringToHash(shotGunBoolName);
         sniperBoolHash = Animator.StringToHash(sniperBoolName);
         pistolBoolHash = Animator.StringToHash(pistolBoolName);
+        shieldAxeBoolHash = Animator.StringToHash(shieldAxeBoolName);
     }
 
     public void ApplyWeaponAnimatorState()
@@ -91,6 +95,10 @@ public class EnemyWeaponAnimatorState : MonoBehaviour
             case EnemyWeaponType.Pistol:
                 SetBoolSafe(pistolBoolHash, pistolBoolName, true);
                 break;
+
+            case EnemyWeaponType.ShieldAxe:
+            SetBoolSafe(shieldAxeBoolHash, shieldAxeBoolName, true);
+            break;
         }
     }
 
@@ -103,6 +111,7 @@ public class EnemyWeaponAnimatorState : MonoBehaviour
         SetBoolSafe(shotGunBoolHash, shotGunBoolName, false);
         SetBoolSafe(sniperBoolHash, sniperBoolName, false);
         SetBoolSafe(pistolBoolHash, pistolBoolName, false);
+        SetBoolSafe(shieldAxeBoolHash, shieldAxeBoolName, false);
     }
 
     private void SetBoolSafe(int hash, string parameterName, bool value)
