@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: fbd1a9af79dd9324ba79ba9db17f4661
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Incendiary_Grenade/URP/P_Incendiary_Burning_URP.prefab
+  uploadId: 693428

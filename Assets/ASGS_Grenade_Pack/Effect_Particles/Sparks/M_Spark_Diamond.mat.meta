@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3bf82367180f504439bf18469bc45b9d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Sparks/M_Spark_Diamond.mat
+  uploadId: 693428

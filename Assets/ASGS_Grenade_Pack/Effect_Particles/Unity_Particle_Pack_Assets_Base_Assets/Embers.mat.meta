@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 776677ab3818fb249adaca05f4e04545
+timeCreated: 1471532950
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Unity_Particle_Pack_Assets_Base_Assets/Embers.mat
+  uploadId: 693428

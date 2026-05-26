@@ -100,6 +100,9 @@ public class PlayerWeaponSlots : MonoBehaviour
 
     [SerializeField] private bool blockSwitchWhileShootingLocked = true;
 
+    [Header("External Switch Lock")]
+    [SerializeField] private bool externalSwitchLock = false;
+
     private InputAction changeWeaponUpAction;
     private InputAction changeWeaponDownAction;
 
@@ -125,6 +128,7 @@ public class PlayerWeaponSlots : MonoBehaviour
 
     public int CurrentWeaponIndex => currentWeaponIndex;
     public bool IsSwitching => isSwitching;
+    public bool ExternalSwitchLock => externalSwitchLock;
 
     public GameObject CurrentWeaponObject
     {
@@ -242,6 +246,7 @@ public class PlayerWeaponSlots : MonoBehaviour
         slot5Action?.Disable();
 
         StopSwitchingRoutineAndRestore();
+        externalSwitchLock = false;
     }
 
     private void Update()
@@ -377,8 +382,55 @@ public class PlayerWeaponSlots : MonoBehaviour
         hasEquippedOnce = true;
     }
 
+    public void SetExternalSwitchLock(bool locked)
+    {
+        externalSwitchLock = locked;
+
+        if (locked)
+            StopSwitchingRoutineAndRestore();
+    }
+
+    public bool ForceRestoreWeaponSilently(int index)
+    {
+        if (!IsValidWeaponIndex(index))
+            return false;
+
+        StopSwitchingRoutineAndRestore();
+
+        WeaponSlot previousSlot = GetCurrentSlot();
+
+        if (previousSlot != null)
+            ClearShootRuntimeState(previousSlot);
+
+        for (int i = 0; i < weaponSlots.Count; i++)
+        {
+            WeaponSlot slot = weaponSlots[i];
+
+            if (slot == null || slot.weaponObject == null)
+                continue;
+
+            slot.weaponObject.SetActive(i == index);
+        }
+
+        currentWeaponIndex = index;
+
+        WeaponSlot current = GetCurrentSlot();
+
+        if (current != null)
+        {
+            ClearShootRuntimeState(current);
+            UpdateAnimatorWeaponBools(current);
+        }
+
+        hasEquippedOnce = true;
+        return true;
+    }
+
     public bool CanSwitchWeapon()
     {
+        if (externalSwitchLock)
+            return false;
+
         if (blockSwitchWhileSwitching && isSwitching)
             return false;
 
@@ -426,7 +478,7 @@ public class PlayerWeaponSlots : MonoBehaviour
         switchingRoutine = StartCoroutine(SwitchingRoutine());
     }
 
-private IEnumerator SwitchingRoutine()
+    private IEnumerator SwitchingRoutine()
     {
         isSwitching = true;
         SetAnimatorSwitchingBool(true);

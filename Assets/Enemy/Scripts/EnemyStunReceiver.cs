@@ -8,7 +8,8 @@ public class EnemyStunReceiver : MonoBehaviour
     {
         Generic,
         Head,
-        Body
+        Body,
+        Back
     }
 
     public enum StunCooldownStartMode
@@ -65,6 +66,10 @@ public class EnemyStunReceiver : MonoBehaviour
     [SerializeField] private string defaultStunTriggerName = "Stun";
     [SerializeField] private string headStunTriggerName = "HeadStun";
     [SerializeField] private string bodyStunTriggerName = "BodyStun";
+    [SerializeField] private string backStunTriggerName = "BackStun";
+
+    [Header("Confirmed Back Trigger")]
+    [SerializeField] private bool confirmedBackTriggerRequiresBodyHitPart = true;
 
     [Header("Shoot Lock")]
     [SerializeField] private bool addShootLockWhileStunned = true;
@@ -169,6 +174,75 @@ public class EnemyStunReceiver : MonoBehaviour
         return true;
     }
 
+    public bool IsConfirmedBackTriggerBodyHit(Collider hitCollider)
+    {
+        if (hitCollider == null)
+            return false;
+
+        StunHitboxBinding binding = FindBinding(hitCollider);
+
+        if (binding == null)
+            return false;
+
+        if (confirmedBackTriggerRequiresBodyHitPart && binding.hitPart != StunHitPart.Body)
+            return false;
+
+        return true;
+    }
+
+    public bool TryApplyConfirmedBackTriggerStun(Collider hitCollider)
+    {
+        if (hitCollider == null)
+            return false;
+
+        if (ignoreIfDead && enemyHealth != null && enemyHealth.IsDead)
+            return false;
+
+        StunHitboxBinding binding = FindBinding(hitCollider);
+
+        if (binding == null)
+        {
+            if (logRejectedHitbox)
+            {
+                Debug.Log(
+                    $"[EnemyStunReceiver] Rejected confirmed back trigger body hitbox: {hitCollider.name}. This collider is not manually registered.",
+                    this
+                );
+            }
+
+            return false;
+        }
+
+        if (confirmedBackTriggerRequiresBodyHitPart && binding.hitPart != StunHitPart.Body)
+        {
+            if (logRejectedHitbox)
+            {
+                Debug.Log(
+                    $"[EnemyStunReceiver] Rejected confirmed back trigger. Hitbox={hitCollider.name}, Part={binding.hitPart}, Required=Body",
+                    this
+                );
+            }
+
+            return false;
+        }
+
+        if (IsInStunCooldown)
+        {
+            if (logCooldownRejected)
+            {
+                Debug.Log(
+                    $"[EnemyStunReceiver] Confirmed back trigger stun rejected by cooldown. Remaining={StunCooldownRemaining:F2}s, Hitbox={hitCollider.name}",
+                    this
+                );
+            }
+
+            return false;
+        }
+
+        ApplyStunWithTriggerOverride(binding, false, backStunTriggerName);
+        return true;
+    }
+
     public void ForceStun(float duration)
     {
         if (!forceStunIgnoresCooldown && IsInStunCooldown)
@@ -240,6 +314,26 @@ public class EnemyStunReceiver : MonoBehaviour
             : StunHitPart.Generic;
 
         string triggerName = ResolveTriggerName(binding, part);
+
+        ApplyStun(binding, duration, part, triggerName, forced);
+    }
+
+    private void ApplyStunWithTriggerOverride(
+        StunHitboxBinding binding,
+        bool forced,
+        string triggerOverride)
+    {
+        float duration = binding != null && binding.overrideStunDuration
+            ? binding.stunDuration
+            : defaultStunDuration;
+
+        StunHitPart part = binding != null
+            ? binding.hitPart
+            : StunHitPart.Generic;
+
+        string triggerName = !string.IsNullOrWhiteSpace(triggerOverride)
+            ? triggerOverride
+            : ResolveTriggerName(binding, part);
 
         ApplyStun(binding, duration, part, triggerName, forced);
     }
@@ -342,6 +436,9 @@ public class EnemyStunReceiver : MonoBehaviour
 
             case StunHitPart.Body:
                 return bodyStunTriggerName;
+
+            case StunHitPart.Back:
+                return backStunTriggerName;
 
             case StunHitPart.Generic:
             default:

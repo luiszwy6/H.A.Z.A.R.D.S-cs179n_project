@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 41f7a176aaf18c44e96039d9fdda6ea9
+timeCreated: 1472572134
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Unity_Particle_Pack_Assets_Base_Assets/ParticlesLight_BuiltIn.prefab
+  uploadId: 693428

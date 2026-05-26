@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 388f1cfc26229e24987335d32464412a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/M_Smoke_Trail.mat
+  uploadId: 693428

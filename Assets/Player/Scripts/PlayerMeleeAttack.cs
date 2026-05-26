@@ -21,6 +21,11 @@ public class PlayerMeleeAttack : MonoBehaviour
     [SerializeField] private string meleeTriggerName = "Melee";
     [SerializeField] private bool resetTriggerBeforeSet = true;
 
+    [Header("BackStab Animator")]
+    [SerializeField] private bool enableBackStab = true;
+    [SerializeField] private string backStabTriggerName = "BackStab";
+    [SerializeField] private bool clearBackTriggerAfterBackStab = true;
+
     [Header("Cooldown")]
     [SerializeField] private bool useMeleeCooldown = true;
     [SerializeField] private float meleeCooldown = 0.6f;
@@ -65,10 +70,14 @@ public class PlayerMeleeAttack : MonoBehaviour
     [SerializeField] private bool blockWhenRecoveryLocked = true;
     [SerializeField] private bool blockWhenRunning = false;
 
+    [Header("Debug")]
+    [SerializeField] private bool logBackStab = false;
+
     private PlayerInput playerInput;
     private InputAction meleeAction;
 
     private int meleeTriggerHash;
+    private int backStabTriggerHash;
     private int shootTriggerHash;
     private int isShootingBoolHash;
     private int keepShootingBoolHash;
@@ -85,11 +94,24 @@ public class PlayerMeleeAttack : MonoBehaviour
     private bool hasCachedCurrentWeaponObject;
     private Coroutine meleeWeaponVisibilityRoutine;
 
+    private EnemyBackTrigger currentEnemyBackTrigger;
+    private bool currentAttackIsBackStab;
+
     public bool IsMeleeOnCooldown =>
         useMeleeCooldown && Time.time < nextMeleeAllowedTime;
 
     public float MeleeCooldownRemaining =>
         IsMeleeOnCooldown ? nextMeleeAllowedTime - Time.time : 0f;
+
+    public bool HasBackStabTarget =>
+        enableBackStab &&
+        currentEnemyBackTrigger != null &&
+        currentEnemyBackTrigger.AllowPlayerBackStab &&
+        currentEnemyBackTrigger.IsBehindPosition(transform.position);
+
+    public EnemyBackTrigger CurrentEnemyBackTrigger => HasBackStabTarget
+        ? currentEnemyBackTrigger
+        : null;
 
     private void Reset()
     {
@@ -131,6 +153,7 @@ public class PlayerMeleeAttack : MonoBehaviour
             FindMeleeDamage();
 
         meleeTriggerHash = Animator.StringToHash(meleeTriggerName);
+        backStabTriggerHash = Animator.StringToHash(backStabTriggerName);
         shootTriggerHash = Animator.StringToHash(shootTriggerName);
         isShootingBoolHash = Animator.StringToHash(isShootingBoolName);
         keepShootingBoolHash = Animator.StringToHash(keepShootingBoolName);
@@ -172,6 +195,9 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         StopMeleeWeaponVisibilityRoutineOnly();
         RestoreWeaponVisibility();
+
+        currentEnemyBackTrigger = null;
+        currentAttackIsBackStab = false;
     }
 
     private void OnMeleePerformed(InputAction.CallbackContext context)
@@ -183,6 +209,8 @@ public class PlayerMeleeAttack : MonoBehaviour
     {
         if (!CanMeleeAttack())
             return false;
+
+        PrepareCurrentMeleeMode();
 
         if (playerMovement != null)
             playerMovement.CancelAimAndRequireRepress();
@@ -205,6 +233,9 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         if (restoreWeaponVisibilityAfterDuration)
             StartMeleeWeaponVisibilityRestoreRoutine();
+
+        if (currentAttackIsBackStab && clearBackTriggerAfterBackStab)
+            currentEnemyBackTrigger = null;
 
         return true;
     }
@@ -247,6 +278,68 @@ public class PlayerMeleeAttack : MonoBehaviour
         return true;
     }
 
+    public void SetCurrentEnemyBackTrigger(EnemyBackTrigger backTrigger)
+    {
+        if (backTrigger == null)
+            return;
+
+        if (!enableBackStab)
+            return;
+
+        if (!backTrigger.AllowPlayerBackStab)
+            return;
+
+        if (!backTrigger.IsBehindPosition(transform.position))
+            return;
+
+        currentEnemyBackTrigger = backTrigger;
+    }
+
+    public void ClearCurrentEnemyBackTrigger(EnemyBackTrigger backTrigger)
+    {
+        if (backTrigger == null)
+            return;
+
+        if (currentEnemyBackTrigger != backTrigger)
+            return;
+
+        currentEnemyBackTrigger = null;
+    }
+
+    public void ClearCurrentEnemyBackTrigger()
+    {
+        currentEnemyBackTrigger = null;
+    }
+
+    private void PrepareCurrentMeleeMode()
+    {
+        currentAttackIsBackStab = HasBackStabTarget;
+
+        if (meleeDamage == null && autoFindMeleeDamageInChildren)
+            FindMeleeDamage();
+
+        if (meleeDamage == null)
+            return;
+
+        if (currentAttackIsBackStab)
+        {
+            meleeDamage.UseBackStabDamage();
+
+            if (logBackStab)
+            {
+                string enemyName = currentEnemyBackTrigger != null && currentEnemyBackTrigger.EnemyRoot != null
+                    ? currentEnemyBackTrigger.EnemyRoot.name
+                    : "None";
+
+                Debug.Log($"[PlayerMeleeAttack] BackStab selected. Target={enemyName}", this);
+            }
+
+            return;
+        }
+
+        meleeDamage.UseNormalDamage();
+    }
+
     [ContextMenu("Find Melee Damage")]
     public void FindMeleeDamage()
     {
@@ -273,6 +366,8 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         if (meleeDamage != null)
             meleeDamage.CloseDamageWindow();
+
+        currentAttackIsBackStab = false;
     }
 
     public void OpenDamageWindowForDefaultDuration()
@@ -375,6 +470,15 @@ public class PlayerMeleeAttack : MonoBehaviour
     {
         if (animator == null)
             return;
+
+        if (currentAttackIsBackStab)
+        {
+            if (resetTriggerBeforeSet)
+                animator.ResetTrigger(backStabTriggerHash);
+
+            animator.SetTrigger(backStabTriggerHash);
+            return;
+        }
 
         if (resetTriggerBeforeSet)
             animator.ResetTrigger(meleeTriggerHash);

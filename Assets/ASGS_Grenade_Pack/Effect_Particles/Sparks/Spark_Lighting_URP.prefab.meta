@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: a64ebdca93fc8b349b223420754fe5b8
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Sparks/Spark_Lighting_URP.prefab
+  uploadId: 693428

@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 5cd2b60f4544aa74194c5649c2b5131a
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/P_CQC_Expl_Pull_Pin_BuiltIn.prefab
+  uploadId: 693428

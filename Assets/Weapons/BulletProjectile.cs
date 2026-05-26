@@ -34,12 +34,17 @@ public class BulletProjectile : MonoBehaviour
     [Header("Hit Reaction")]
     [SerializeField] private bool applyEnemyHealthDamage = true;
     [SerializeField] private bool playHitPartShake = true;
+    [SerializeField] private bool playHitPartBlood = true;
+    [SerializeField] private bool playEnemyHitAudio = true;
     [SerializeField] private bool searchInParents = true;
 
     [Header("Stun Reaction")]
     [SerializeField] private bool applyEnemyStun = true;
     [SerializeField] private bool applyStunBeforeDamage = false;
     [SerializeField] private bool logStunHit = false;
+
+    [Header("Back Trigger")]
+    [SerializeField] private bool useEnemyBackTrigger = true;
 
     [Header("Behavior")]
     public bool destroyOnAnyHit = true;
@@ -74,6 +79,8 @@ public class BulletProjectile : MonoBehaviour
     private bool _hasPrevPosForGizmo = false;
 
     private readonly List<EnemyHealth> penetratedEnemies = new List<EnemyHealth>();
+    private readonly List<PlayerHealth> penetratedPlayers = new List<PlayerHealth>();
+    private readonly HashSet<EnemyStunReceiver> passedBackTriggerReceivers = new HashSet<EnemyStunReceiver>();
 
     public void SetDamagePayload(
         float Base_dmg,
@@ -137,7 +144,10 @@ public class BulletProjectile : MonoBehaviour
         runtimeBaseDamage = Mathf.Max(0f, Base_dmg);
         runtimeKnockbackValue = Mathf.Max(0f, knockbackValue);
         runtimeRemainingPenetrations = Mathf.Max(0, PenetrationLevel);
+
         penetratedEnemies.Clear();
+        penetratedPlayers.Clear();
+        passedBackTriggerReceivers.Clear();
 
         transform.rotation = Quaternion.LookRotation(_dir, Vector3.up);
 
@@ -234,17 +244,24 @@ public class BulletProjectile : MonoBehaviour
             if (hit.collider == null)
                 continue;
 
+            if (TryProcessEnemyBackTrigger(hit))
+                continue;
+
             EnemyHealth enemyHealth = GetEnemyHealthFromCollider(hit.collider);
+            PlayerHealth playerHealth = GetPlayerHealthFromCollider(hit.collider);
 
             if (logRawHit)
             {
                 Debug.Log(
-                    $"[BulletProjectile] Raw hit={hit.collider.name}, layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}, enemyHealth={enemyHealth}",
+                    $"[BulletProjectile] Raw hit={hit.collider.name}, layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}, enemyHealth={(enemyHealth != null ? enemyHealth.name : "null")}, playerHealth={(playerHealth != null ? playerHealth.name : "null")}",
                     this
                 );
             }
 
             if (enemyHealth != null && penetratedEnemies.Contains(enemyHealth))
+                continue;
+
+            if (playerHealth != null && penetratedPlayers.Contains(playerHealth))
                 continue;
 
             closestHit = hit;
@@ -256,17 +273,33 @@ public class BulletProjectile : MonoBehaviour
 
     private bool HandleHit(RaycastHit hit)
     {
+        if (hit.collider == null)
+            return destroyOnAnyHit;
+
         EnemyHealth enemyHealth = GetEnemyHealthFromCollider(hit.collider);
 
-        if (enemyHealth == null)
-        {
-            if (applyEnemyStun)
-                TryApplyEnemyStun(hit);
+        if (enemyHealth != null)
+            return HandleEnemyHit(hit, enemyHealth);
 
-            return destroyOnAnyHit;
-        }
+        PlayerHealth playerHealth = GetPlayerHealthFromCollider(hit.collider);
 
+        if (playerHealth != null)
+            return HandlePlayerHit(hit, playerHealth);
+
+        if (applyEnemyStun)
+            TryApplyEnemyStun(hit);
+
+        if (playHitPartShake)
+            TryPlayHitPartShake(hit);
+
+        return destroyOnAnyHit;
+    }
+
+    private bool HandleEnemyHit(RaycastHit hit, EnemyHealth enemyHealth)
+    {
         bool enemyHandled = false;
+        float appliedDamage = 0f;
+        bool triggeredKnockback = false;
 
         if (applyEnemyStun && applyStunBeforeDamage)
             TryApplyEnemyStun(hit);
@@ -279,14 +312,14 @@ public class BulletProjectile : MonoBehaviour
                 ArmoPierLevel,
                 runtimeKnockbackValue,
                 partOverrides,
-                out float appliedDamage,
-                out bool triggeredKnockback
+                out appliedDamage,
+                out triggeredKnockback
             );
 
             if (logHit)
             {
                 Debug.Log(
-                    $"[BulletProjectile] Hit enemy={enemyHealth.name}, Base_dmg={runtimeBaseDamage}, ArmoPierLevel={ArmoPierLevel}, Knockback={runtimeKnockbackValue}, Applied={appliedDamage}, KnockbackTriggered={triggeredKnockback}",
+                    $"[BulletProjectile] Hit enemy={enemyHealth.name}, Collider={hit.collider.name}, Base_dmg={runtimeBaseDamage}, ArmoPierLevel={ArmoPierLevel}, Knockback={runtimeKnockbackValue}, Applied={appliedDamage}, KnockbackTriggered={triggeredKnockback}, Handled={enemyHandled}",
                     this
                 );
             }
@@ -298,6 +331,12 @@ public class BulletProjectile : MonoBehaviour
         if (playHitPartShake)
             TryPlayHitPartShake(hit);
 
+        if (enemyHandled && appliedDamage > 0f && playHitPartBlood)
+            TryPlayHitPartBlood(hit);
+
+        if (enemyHandled && appliedDamage > 0f && playEnemyHitAudio)
+            TryPlayEnemyRangedHitAudio(hit, appliedDamage, enemyHealth.IsDead);
+
         if (!enemyHandled)
             return destroyOnAnyHit;
 
@@ -308,6 +347,77 @@ public class BulletProjectile : MonoBehaviour
             runtimeRemainingPenetrations--;
             ApplyPenetrationDecay();
             return false;
+        }
+
+        return true;
+    }
+
+    private bool HandlePlayerHit(RaycastHit hit, PlayerHealth playerHealth)
+    {
+        bool playerHandled = false;
+
+        if (applyEnemyHealthDamage)
+        {
+            playerHandled = playerHealth.TryApplyBulletDamage(
+                hit,
+                runtimeBaseDamage,
+                ArmoPierLevel,
+                runtimeKnockbackValue,
+                out float appliedDamage,
+                out bool triggeredKnockback
+            );
+
+            if (logHit)
+            {
+                Debug.Log(
+                    $"[BulletProjectile] Hit player={playerHealth.name}, Collider={hit.collider.name}, Base_dmg={runtimeBaseDamage}, ArmoPierLevel={ArmoPierLevel}, Knockback={runtimeKnockbackValue}, Applied={appliedDamage}, KnockbackTriggered={triggeredKnockback}, Handled={playerHandled}",
+                    this
+                );
+            }
+        }
+
+        if (playHitPartShake)
+            TryPlayHitPartShake(hit);
+
+        if (!playerHandled)
+            return destroyOnAnyHit;
+
+        penetratedPlayers.Add(playerHealth);
+
+        if (runtimeRemainingPenetrations > 0)
+        {
+            runtimeRemainingPenetrations--;
+            ApplyPenetrationDecay();
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryProcessEnemyBackTrigger(RaycastHit hit)
+    {
+        if (!useEnemyBackTrigger)
+            return false;
+
+        EnemyBackTrigger backTrigger = GetEnemyBackTriggerFromCollider(hit.collider);
+
+        if (backTrigger == null)
+            return false;
+
+        if (!backTrigger.IsBehindPosition(hit.point))
+            return true;
+
+        if (backTrigger.TryGetStunReceiver(out EnemyStunReceiver receiver) && receiver != null)
+        {
+            passedBackTriggerReceivers.Add(receiver);
+
+            if (logRawHit || backTrigger.LogPassThrough)
+            {
+                Debug.Log(
+                    $"[BulletProjectile] Passed EnemyBackTrigger={hit.collider.name}, Receiver={receiver.name}",
+                    this
+                );
+            }
         }
 
         return true;
@@ -331,6 +441,16 @@ public class BulletProjectile : MonoBehaviour
             : col.GetComponent<EnemyHealth>();
     }
 
+    private PlayerHealth GetPlayerHealthFromCollider(Collider col)
+    {
+        if (col == null)
+            return null;
+
+        return searchInParents
+            ? col.GetComponentInParent<PlayerHealth>()
+            : col.GetComponent<PlayerHealth>();
+    }
+
     private EnemyStunReceiver GetEnemyStunReceiverFromCollider(Collider col)
     {
         if (col == null)
@@ -339,6 +459,16 @@ public class BulletProjectile : MonoBehaviour
         return searchInParents
             ? col.GetComponentInParent<EnemyStunReceiver>()
             : col.GetComponent<EnemyStunReceiver>();
+    }
+
+    private EnemyBackTrigger GetEnemyBackTriggerFromCollider(Collider col)
+    {
+        if (col == null)
+            return null;
+
+        return searchInParents
+            ? col.GetComponentInParent<EnemyBackTrigger>()
+            : col.GetComponent<EnemyBackTrigger>();
     }
 
     private void TryApplyEnemyStun(RaycastHit hit)
@@ -351,12 +481,20 @@ public class BulletProjectile : MonoBehaviour
         if (stunReceiver == null)
             return;
 
-        bool stunned = stunReceiver.TryApplyStunFromHit(hit.collider);
+        bool backTriggerPassed = passedBackTriggerReceivers.Contains(stunReceiver);
+
+        bool useConfirmedBackTrigger =
+            backTriggerPassed &&
+            stunReceiver.IsConfirmedBackTriggerBodyHit(hit.collider);
+
+        bool stunned = useConfirmedBackTrigger
+            ? stunReceiver.TryApplyConfirmedBackTriggerStun(hit.collider)
+            : stunReceiver.TryApplyStunFromHit(hit.collider);
 
         if (logStunHit)
         {
             Debug.Log(
-                $"[BulletProjectile] Stun check. Collider={hit.collider.name}, Receiver={stunReceiver.name}, Applied={stunned}",
+                $"[BulletProjectile] Stun check. Collider={hit.collider.name}, Receiver={stunReceiver.name}, BackTriggerPassed={backTriggerPassed}, ConfirmedBackTrigger={useConfirmedBackTrigger}, Applied={stunned}",
                 this
             );
         }
@@ -375,6 +513,36 @@ public class BulletProjectile : MonoBehaviour
             return;
 
         shake.PlayHurtbox(hit.collider);
+    }
+
+    private void TryPlayHitPartBlood(RaycastHit hit)
+    {
+        if (hit.collider == null)
+            return;
+
+        HitPartBloodEffect blood = searchInParents
+            ? hit.collider.GetComponentInParent<HitPartBloodEffect>()
+            : hit.collider.GetComponent<HitPartBloodEffect>();
+
+        if (blood == null)
+            return;
+
+        blood.PlayHit(hit);
+    }
+
+    private void TryPlayEnemyRangedHitAudio(RaycastHit hit, float appliedDamage, bool fatal)
+    {
+        if (hit.collider == null)
+            return;
+
+        EnemyAudioFeedback audioFeedback = searchInParents
+            ? hit.collider.GetComponentInParent<EnemyAudioFeedback>()
+            : hit.collider.GetComponent<EnemyAudioFeedback>();
+
+        if (audioFeedback == null)
+            return;
+
+        audioFeedback.PlayRangedHit(hit.collider, hit.point, appliedDamage, fatal);
     }
 
     private void OnDrawGizmos()

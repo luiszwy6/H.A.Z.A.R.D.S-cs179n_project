@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 01e9c84de0d452e4291447d798e294b1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/CQC_Low_Yield_Grenade/CQC_Grenade_Test_CTRL.controller
+  uploadId: 693428

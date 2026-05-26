@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 61b687d36f1c8fa4ebfaa6edbdf4b4c8
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 296530
+  packageName: ASGS Interactable Grenade & Effects Pack
+  packageVersion: 1.0.0
+  assetPath: Assets/ASGS_Grenade_Pack/Effect_Particles/Sparks/Spark_Particles_V2.prefab
+  uploadId: 693428
