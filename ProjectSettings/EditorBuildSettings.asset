@@ -6,8 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Scene 1.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Scenes/Anthony-GameFlow/main_menu.unity
+    guid: 4b391337631229f47a70bb0a2260c31c
+  - enabled: 1
+    path: Assets/Scenes/Anthony-GameFlow/gameflow.unity
+    guid: 86922c5f50bc0cb45a2fd4196bdffb56
+  - enabled: 1
+    path: Assets/Scenes/Anthony-GameFlow/victory_screen.unity
+    guid: 312ed7dd54f492244a45bbf59bb87a04
+  - enabled: 1
+    path: Assets/Scenes/Anthony-GameFlow/defeat_screen.unity
+    guid: 42e71a61600d6d347bb36e2e5c754def
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 99f9c9493070a9d4c979a8fec7c5a8d3, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
