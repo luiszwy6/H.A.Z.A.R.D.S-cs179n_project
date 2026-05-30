@@ -136,12 +136,27 @@ public class BulletTimeAbility : MonoBehaviour
         if (Time.unscaledTime < nextToggleTime)
             return;
 
-        if (!manualRequested && CurrentResource <= 0.01f)
+        bool isActive = manualRequested || slideRequested;
+
+        if (!isActive && CurrentResource <= 0.01f)
             return;
 
-        manualRequested = !manualRequested;
-        nextToggleTime = Time.unscaledTime + toggleCooldown;
+        if (isActive)
+        {
+            manualRequested = false;
 
+            if (slideRequested)
+            {
+                slideRequested = false;
+                slideAutoBlockedUntilSlideEnds = true;
+            }
+        }
+        else
+        {
+            manualRequested = true;
+        }
+
+        nextToggleTime = Time.unscaledTime + toggleCooldown;
         RefreshActiveState(force: true);
     }
 

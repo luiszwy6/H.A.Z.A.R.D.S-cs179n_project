@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
 [DisallowMultipleComponent]
 public class EnemyStunReceiver : MonoBehaviour
@@ -41,6 +42,8 @@ public class EnemyStunReceiver : MonoBehaviour
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private Animator animator;
     [SerializeField] private EnemyShootLockController shootLockController;
+    [SerializeField] private NavMeshAgent agent;
+    [SerializeField] private EnemyStatus enemyStatus;
 
     [Header("Manual Stun Hitboxes")]
     [Tooltip("Only colliders registered here can trigger stun.")]
@@ -60,6 +63,12 @@ public class EnemyStunReceiver : MonoBehaviour
     [Header("Animator")]
     [SerializeField] private bool setAnimatorIsStunBool = true;
     [SerializeField] private string isStunBoolName = "IsStun";
+    [SerializeField] private bool setAnimatorFlashStunBool = true;
+    [SerializeField] private string isStunByFlashBoolName = "IsStunByFlash";
+
+    [Header("Flash Bang Stun")]
+    [SerializeField] private bool overrideFlashBangStatusDuration = false;
+    [Min(0f)] [SerializeField] private float flashBangStatusDuration = 3f;
 
     [SerializeField] private bool triggerAnimatorStun = true;
     [SerializeField] private bool usePartSpecificTriggers = true;
@@ -75,6 +84,12 @@ public class EnemyStunReceiver : MonoBehaviour
     [SerializeField] private bool addShootLockWhileStunned = true;
     [SerializeField] private bool removeShootLockWhenStunEnds = true;
 
+    [Header("Movement Lock")]
+    [SerializeField] private bool stopMovementWhileStunned = true;
+    [SerializeField] private bool resetPathWhenStunned = false;
+    [SerializeField] private bool forceZeroVelocityWhenStunned = true;
+    [SerializeField] private bool resumeMovementWhenStunEnds = true;
+
     [Header("Debug")]
     [SerializeField] private bool logStun = false;
     [SerializeField] private bool logRejectedHitbox = false;
@@ -82,16 +97,24 @@ public class EnemyStunReceiver : MonoBehaviour
     [SerializeField] private bool logMissingAnimatorParameter = false;
 
     private bool isStunned;
+    private bool isFlashBangStun;
     private float stunEndTime;
+    private float flashBangStunEndTime;
     private float nextAllowedStunTime;
     private StunHitPart currentStunPart = StunHitPart.Generic;
     private Coroutine stunRoutine;
+    private Coroutine flashBangStunRoutine;
     private bool shootLockAddedByThis;
+    private bool cachedAgentStopped;
+    private bool hasCachedAgentStopped;
 
     private int isStunBoolHash;
+    private int isStunByFlashBoolHash;
 
     public bool IsStunned => isStunned;
+    public bool IsFlashBangStun => isFlashBangStun;
     public float StunRemaining => isStunned ? Mathf.Max(0f, stunEndTime - Time.time) : 0f;
+    public float FlashBangStunRemaining => isFlashBangStun ? Mathf.Max(0f, flashBangStunEndTime - Time.time) : 0f;
     public float StunCooldownRemaining => Mathf.Max(0f, nextAllowedStunTime - Time.time);
     public bool IsInStunCooldown => useStunCooldown && Time.time < nextAllowedStunTime;
     public StunHitPart CurrentStunPart => currentStunPart;
@@ -101,6 +124,8 @@ public class EnemyStunReceiver : MonoBehaviour
         enemyHealth = GetComponent<EnemyHealth>();
         animator = GetComponentInChildren<Animator>();
         shootLockController = GetComponent<EnemyShootLockController>();
+        agent = GetComponent<NavMeshAgent>();
+        enemyStatus = GetComponent<EnemyStatus>();
     }
 
     private void Awake()
@@ -114,7 +139,14 @@ public class EnemyStunReceiver : MonoBehaviour
         if (shootLockController == null)
             shootLockController = GetComponent<EnemyShootLockController>();
 
+        if (agent == null)
+            agent = GetComponent<NavMeshAgent>();
+
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
         isStunBoolHash = Animator.StringToHash(isStunBoolName);
+        isStunByFlashBoolHash = Animator.StringToHash(isStunByFlashBoolName);
         NormalizeManualBindings();
     }
 
@@ -131,7 +163,14 @@ public class EnemyStunReceiver : MonoBehaviour
             stunRoutine = null;
         }
 
+        if (flashBangStunRoutine != null)
+        {
+            StopCoroutine(flashBangStunRoutine);
+            flashBangStunRoutine = null;
+        }
+
         ClearStunRuntime(false);
+        ClearFlashBangStunStatus();
     }
 
     public bool TryApplyStunFromHit(Collider hitCollider)
@@ -263,7 +302,43 @@ public class EnemyStunReceiver : MonoBehaviour
             Mathf.Max(0f, duration),
             StunHitPart.Generic,
             defaultStunTriggerName,
-            true
+            true,
+            false
+        );
+    }
+
+    public void ForceFlashBangStun(float duration)
+    {
+        float statusDuration = overrideFlashBangStatusDuration
+            ? flashBangStatusDuration
+            : duration;
+
+        ForceFlashBangStun(duration, statusDuration);
+    }
+
+    public void ForceFlashBangStun(float duration, float flashStatusDuration)
+    {
+        if (!forceStunIgnoresCooldown && IsInStunCooldown)
+        {
+            if (logCooldownRejected)
+            {
+                Debug.Log(
+                    $"[EnemyStunReceiver] Flash stun rejected by cooldown. Remaining={StunCooldownRemaining:F2}s",
+                    this
+                );
+            }
+
+            return;
+        }
+
+        ApplyStun(
+            null,
+            Mathf.Max(0f, duration),
+            StunHitPart.Generic,
+            defaultStunTriggerName,
+            true,
+            true,
+            flashStatusDuration
         );
     }
 
@@ -315,7 +390,7 @@ public class EnemyStunReceiver : MonoBehaviour
 
         string triggerName = ResolveTriggerName(binding, part);
 
-        ApplyStun(binding, duration, part, triggerName, forced);
+        ApplyStun(binding, duration, part, triggerName, forced, false);
     }
 
     private void ApplyStunWithTriggerOverride(
@@ -335,7 +410,7 @@ public class EnemyStunReceiver : MonoBehaviour
             ? triggerOverride
             : ResolveTriggerName(binding, part);
 
-        ApplyStun(binding, duration, part, triggerName, forced);
+        ApplyStun(binding, duration, part, triggerName, forced, false);
     }
 
     private void ApplyStun(
@@ -343,7 +418,9 @@ public class EnemyStunReceiver : MonoBehaviour
         float duration,
         StunHitPart part,
         string triggerName,
-        bool forced)
+        bool forced,
+        bool flashBangStun,
+        float flashStatusDuration = 0f)
     {
         duration = Mathf.Max(0.01f, duration);
 
@@ -358,8 +435,12 @@ public class EnemyStunReceiver : MonoBehaviour
             StartStunCooldown();
 
         AddShootLock();
+        StopMovement();
 
         SetAnimatorStunBool(true);
+
+        if (flashBangStun)
+            StartFlashBangStunStatus(flashStatusDuration);
 
         if (triggerAnimatorStun)
             SetAnimatorTriggerIfExists(triggerName);
@@ -376,7 +457,7 @@ public class EnemyStunReceiver : MonoBehaviour
                 : "Forced";
 
             Debug.Log(
-                $"[EnemyStunReceiver] Stun triggered. Hitbox={hitboxName}, Part={part}, Duration={duration}, Trigger={triggerName}, Forced={forced}, NextAllowed={nextAllowedStunTime:F2}",
+                $"[EnemyStunReceiver] Stun triggered. Hitbox={hitboxName}, Part={part}, Duration={duration}, Trigger={triggerName}, Forced={forced}, FlashBang={flashBangStun}, NextAllowed={nextAllowedStunTime:F2}",
                 this
             );
         }
@@ -404,6 +485,8 @@ public class EnemyStunReceiver : MonoBehaviour
         if (removeShootLock)
             RemoveShootLock();
 
+        RestoreMovement();
+
         if (wasStunned &&
             useStunCooldown &&
             cooldownStartMode == StunCooldownStartMode.OnStunEnd)
@@ -415,6 +498,40 @@ public class EnemyStunReceiver : MonoBehaviour
     private void StartStunCooldown()
     {
         nextAllowedStunTime = Time.time + Mathf.Max(0f, stunCooldown);
+    }
+
+    private void StartFlashBangStunStatus(float duration)
+    {
+        duration = Mathf.Max(0.01f, duration);
+
+        isFlashBangStun = true;
+        flashBangStunEndTime = Time.time + duration;
+
+        SetAnimatorFlashStunBool(true);
+        SetEnemyFlashBangStunStatus(true);
+
+        if (flashBangStunRoutine != null)
+            StopCoroutine(flashBangStunRoutine);
+
+        flashBangStunRoutine = StartCoroutine(FlashBangStunStatusRoutine());
+    }
+
+    private IEnumerator FlashBangStunStatusRoutine()
+    {
+        while (isFlashBangStun && Time.time < flashBangStunEndTime)
+            yield return null;
+
+        ClearFlashBangStunStatus();
+        flashBangStunRoutine = null;
+    }
+
+    private void ClearFlashBangStunStatus()
+    {
+        isFlashBangStun = false;
+        flashBangStunEndTime = 0f;
+
+        SetAnimatorFlashStunBool(false);
+        SetEnemyFlashBangStunStatus(false);
     }
 
     private string ResolveTriggerName(StunHitboxBinding binding, StunHitPart part)
@@ -461,6 +578,48 @@ public class EnemyStunReceiver : MonoBehaviour
         shootLockAddedByThis = true;
     }
 
+    private void StopMovement()
+    {
+        if (!stopMovementWhileStunned)
+            return;
+
+        if (agent == null)
+            return;
+
+        if (!agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        if (!hasCachedAgentStopped)
+        {
+            cachedAgentStopped = agent.isStopped;
+            hasCachedAgentStopped = true;
+        }
+
+        agent.isStopped = true;
+
+        if (resetPathWhenStunned)
+            agent.ResetPath();
+
+        if (forceZeroVelocityWhenStunned)
+            agent.velocity = Vector3.zero;
+    }
+
+    private void RestoreMovement()
+    {
+        if (!hasCachedAgentStopped)
+            return;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            if (resumeMovementWhenStunEnds)
+                agent.isStopped = false;
+            else
+                agent.isStopped = cachedAgentStopped;
+        }
+
+        hasCachedAgentStopped = false;
+    }
+
     private void RemoveShootLock()
     {
         if (!removeShootLockWhenStunEnds)
@@ -487,6 +646,34 @@ public class EnemyStunReceiver : MonoBehaviour
             return;
 
         SetAnimatorBoolIfExists(animator, isStunBoolHash, value);
+    }
+
+    private void SetAnimatorFlashStunBool(bool value)
+    {
+        if (!setAnimatorFlashStunBool)
+            return;
+
+        if (animator == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(isStunByFlashBoolName))
+            return;
+
+        SetAnimatorBoolIfExists(animator, isStunByFlashBoolHash, value);
+    }
+
+    private void SetEnemyFlashBangStunStatus(bool value)
+    {
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+        {
+            enemyStatus.SetFlashBangStun(value);
+
+            if (value)
+                enemyStatus.SetEscapingFromGrenade(false);
+        }
     }
 
     private void SetAnimatorTriggerIfExists(string triggerName)

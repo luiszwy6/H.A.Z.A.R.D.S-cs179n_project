@@ -5,12 +5,33 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class EnemyWeaponShooter : MonoBehaviour
 {
+    public enum EnemyShootingType
+    {
+        AR,
+        ShotGun,
+        Sniper
+    }
+
+    [Header("Shooting Type")]
+    [SerializeField] private EnemyShootingType shootingType = EnemyShootingType.AR;
+
     [Header("Refs")]
     [SerializeField] private Transform muzzlePoint;
     [SerializeField] private Animator enemyAnimator;
     [SerializeField] private EnemyAnimatorParameterDriver enemyAnimatorDriver;
     [SerializeField] private EnemyWeaponSettings enemyWeaponSettings;
+    [SerializeField] private EnemyStatus enemyStatus;
+
+    [Header("Damage Setting - AR")]
     [SerializeField] private AR_DamageSetting damageSetting;
+
+    [Header("Damage Setting - ShotGun")]
+    [SerializeField] private SG_DamageSetting sgDamageSetting;
+
+    [Header("Damage Setting - Sniper")]
+    [SerializeField] private SR_DamageSetting srDamageSetting;
+
+    [Header("Weapon SFX/VFX")]
     [SerializeField] private WeaponEffects weaponEffects;
 
     [Header("Projectile - Real Logic")]
@@ -27,12 +48,30 @@ public class EnemyWeaponShooter : MonoBehaviour
     [SerializeField] private Transform visualProjectileSpawnPoint;
     [Min(0.01f)] [SerializeField] private float visualBulletSpeed = 150f;
 
+    [Header("ShotGun Visual")]
+    [SerializeField] private bool spawnVisualProjectileForEachPellet = true;
+
     [Header("Fire Rate")]
     [Min(0f)] [SerializeField] private float shootCooldown = 0.12f;
 
-    [Header("Spread")]
+    [Header("Spread - AR / Default")]
     [SerializeField] private bool useSpread = true;
     [SerializeField] private List<float> spreadAngleList = new List<float> { 1.2f };
+
+    [Header("Spread - ShotGun")]
+    [Min(1)] [SerializeField] private int pelletCount = 6;
+    [SerializeField] private List<float> shotGunSpreadAngleList = new List<float> { 5f, 6f, 7f };
+
+    [Header("Spread - Sniper")]
+    [SerializeField] private List<float> sniperSpreadAngleList = new List<float> { 0f };
+
+    [Header("ShotGun Optional Impact")]
+    [SerializeField] private bool spawnShotGunBulletImpact = false;
+    [SerializeField] private BulletImpact bulletImpactPrefab;
+    [SerializeField] private Transform bulletImpactSpawnPoint;
+    [Min(0.01f)] [SerializeField] private float bulletImpactSpeed = 45f;
+    [Min(0.01f)] [SerializeField] private float bulletImpactMaxDistance = 25f;
+    [SerializeField] private LayerMask bulletImpactHitMask = ~0;
 
     [Header("Animator")]
     [SerializeField] private string shootTriggerName = "Shoot";
@@ -41,8 +80,16 @@ public class EnemyWeaponShooter : MonoBehaviour
     [SerializeField] private bool resetTriggerBeforeSet = true;
     [SerializeField] private float isShootingHoldTime = 0.1f;
 
+    [Header("Animator - Shooting Type")]
+    [SerializeField] private bool useKeepShootingBoolForAR = true;
+    [SerializeField] private bool useKeepShootingBoolForShotGun = false;
+    [SerializeField] private bool useKeepShootingBoolForSniper = false;
+
     [Header("External Locks")]
     public bool externalShootLock;
+
+    [Header("Debug")]
+    [SerializeField] private bool logShot = false;
 
     private float nextShootTime;
 
@@ -85,11 +132,26 @@ public class EnemyWeaponShooter : MonoBehaviour
         if (enemyWeaponSettings == null)
             enemyWeaponSettings = GetComponentInChildren<EnemyWeaponSettings>(true);
 
+        if (enemyStatus == null)
+            enemyStatus = root.GetComponent<EnemyStatus>();
+
         if (damageSetting == null)
             damageSetting = GetComponent<AR_DamageSetting>();
 
         if (damageSetting == null)
             damageSetting = GetComponentInChildren<AR_DamageSetting>(true);
+
+        if (sgDamageSetting == null)
+            sgDamageSetting = GetComponent<SG_DamageSetting>();
+
+        if (sgDamageSetting == null)
+            sgDamageSetting = GetComponentInChildren<SG_DamageSetting>(true);
+
+        if (srDamageSetting == null)
+            srDamageSetting = GetComponent<SR_DamageSetting>();
+
+        if (srDamageSetting == null)
+            srDamageSetting = GetComponentInChildren<SR_DamageSetting>(true);
 
         if (weaponEffects == null)
             weaponEffects = GetComponentInChildren<WeaponEffects>(true);
@@ -150,13 +212,54 @@ public class EnemyWeaponShooter : MonoBehaviour
         nextShootTime = Time.time + Mathf.Max(0f, shootCooldown);
 
         Vector3 origin = muzzlePoint.position;
-        Vector3 dir = targetPoint - origin;
+        Vector3 baseDir = targetPoint - origin;
 
-        if (dir.sqrMagnitude <= 0.0001f)
-            dir = muzzlePoint.forward;
+        if (baseDir.sqrMagnitude <= 0.0001f)
+            baseDir = muzzlePoint.forward;
 
-        dir.Normalize();
-        dir = ApplySpread(dir, GetRandomSpreadAngle());
+        baseDir.Normalize();
+
+        switch (shootingType)
+        {
+            case EnemyShootingType.ShotGun:
+                ShootShotGun(origin, baseDir);
+                break;
+
+            case EnemyShootingType.Sniper:
+                ShootSniper(origin, baseDir);
+                break;
+
+            case EnemyShootingType.AR:
+            default:
+                ShootAR(origin, baseDir);
+                break;
+        }
+
+        if (weaponEffects != null)
+            weaponEffects.PlayGunshot();
+
+        PlayShootAnimator();
+
+        if (logShot)
+        {
+            Debug.Log(
+                $"[EnemyWeaponShooter] ShootAt. Type={shootingType}, Origin={origin}, Target={targetPoint}, BaseDir={baseDir}",
+                this
+            );
+        }
+
+        return true;
+    }
+
+    public void ForceClearRuntimeState()
+    {
+        externalShootLock = false;
+        StopContinuousShootingState();
+    }
+
+    private void ShootAR(Vector3 origin, Vector3 baseDir)
+    {
+        Vector3 dir = ApplySpread(baseDir, GetRandomSpreadAngle(spreadAngleList));
 
         BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
 
@@ -174,27 +277,120 @@ public class EnemyWeaponShooter : MonoBehaviour
             damageSetting.ApplyToProjectile(bullet);
 
         SpawnVisualProjectile(origin, dir);
-
-        if (weaponEffects != null)
-            weaponEffects.PlayGunshot();
-
-        PlayShootAnimator();
-
-        return true;
     }
 
-    public void ForceClearRuntimeState()
+    private void ShootShotGun(Vector3 origin, Vector3 baseDir)
     {
-        externalShootLock = false;
-        StopContinuousShootingState();
+        int count = Mathf.Max(1, pelletCount);
+        Ray firstPelletRay = new Ray(origin, baseDir);
+
+        for (int i = 0; i < count; i++)
+        {
+            float spreadAngle = GetRandomSpreadAngle(shotGunSpreadAngleList);
+            Vector3 pelletDir = ApplySpread(baseDir, spreadAngle);
+            Ray pelletRay = new Ray(origin, pelletDir);
+
+            BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
+
+            bullet.Init(
+                origin,
+                pelletDir,
+                bulletSpeed,
+                bulletMaxDistance,
+                bulletRadius,
+                bulletHitMask,
+                projectileTriggerInteraction
+            );
+
+            if (sgDamageSetting != null)
+                sgDamageSetting.ApplyToProjectile(bullet);
+            else if (damageSetting != null)
+                damageSetting.ApplyToProjectile(bullet);
+
+            if (i == 0)
+                firstPelletRay = pelletRay;
+
+            if (spawnVisualProjectileForEachPellet)
+                SpawnVisualProjectile(pelletRay);
+        }
+
+        if (!spawnVisualProjectileForEachPellet)
+            SpawnVisualProjectile(firstPelletRay);
+
+        if (spawnShotGunBulletImpact)
+            SpawnShotGunBulletImpact(origin, baseDir);
+    }
+
+    private void ShootSniper(Vector3 origin, Vector3 baseDir)
+    {
+        Vector3 dir = ApplySpread(baseDir, GetRandomSpreadAngle(sniperSpreadAngleList));
+
+        BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
+
+        bullet.Init(
+            origin,
+            dir,
+            bulletSpeed,
+            bulletMaxDistance,
+            bulletRadius,
+            bulletHitMask,
+            projectileTriggerInteraction
+        );
+
+        if (srDamageSetting != null)
+            srDamageSetting.ApplyToProjectile(bullet);
+        else if (damageSetting != null)
+            damageSetting.ApplyToProjectile(bullet);
+
+        SpawnVisualProjectile(origin, dir);
+    }
+
+    private void SpawnShotGunBulletImpact(Vector3 shotOrigin, Vector3 shotBaseDir)
+    {
+        if (bulletImpactPrefab == null)
+            return;
+
+        Vector3 spawnOrigin = bulletImpactSpawnPoint != null
+            ? bulletImpactSpawnPoint.position
+            : shotOrigin;
+
+        Vector3 targetPoint = shotOrigin + shotBaseDir.normalized * Mathf.Max(0.01f, bulletImpactMaxDistance);
+        Vector3 dir = targetPoint - spawnOrigin;
+
+        if (dir.sqrMagnitude <= 0.0001f)
+            dir = shotBaseDir;
+
+        if (dir.sqrMagnitude <= 0.0001f)
+            dir = transform.forward;
+
+        dir.Normalize();
+
+        BulletImpact impact = Instantiate(
+            bulletImpactPrefab,
+            spawnOrigin,
+            Quaternion.LookRotation(dir, Vector3.up)
+        );
+
+        impact.Init(
+            spawnOrigin,
+            dir,
+            bulletImpactSpeed,
+            bulletImpactMaxDistance,
+            bulletImpactHitMask,
+            transform.root
+        );
     }
 
     private void PlayShootAnimator()
     {
+        bool useKeepShooting = ShouldUseKeepShootingBool();
+
+        KeepShootingStatusActive();
+
         if (enemyAnimatorDriver != null)
         {
             enemyAnimatorDriver.SetShooting(true);
-            enemyAnimatorDriver.SetKeepShooting(true);
+            enemyAnimatorDriver.SetKeepShooting(useKeepShooting);
             enemyAnimatorDriver.TriggerShoot();
         }
         else if (enemyAnimator != null)
@@ -204,13 +400,31 @@ public class EnemyWeaponShooter : MonoBehaviour
 
             enemyAnimator.SetTrigger(shootTriggerHash);
             enemyAnimator.SetBool(isShootingBoolHash, true);
-            enemyAnimator.SetBool(keepShootingBoolHash, true);
+
+            if (!string.IsNullOrWhiteSpace(keepShootingBoolName))
+                enemyAnimator.SetBool(keepShootingBoolHash, useKeepShooting);
         }
 
         if (shootingBoolRoutine != null)
             StopCoroutine(shootingBoolRoutine);
 
         shootingBoolRoutine = StartCoroutine(ResetShootingAfterDelay());
+    }
+
+    private bool ShouldUseKeepShootingBool()
+    {
+        switch (shootingType)
+        {
+            case EnemyShootingType.Sniper:
+                return useKeepShootingBoolForSniper;
+
+            case EnemyShootingType.ShotGun:
+                return useKeepShootingBoolForShotGun;
+
+            case EnemyShootingType.AR:
+            default:
+                return useKeepShootingBoolForAR;
+        }
     }
 
     private IEnumerator ResetShootingAfterDelay()
@@ -236,20 +450,34 @@ public class EnemyWeaponShooter : MonoBehaviour
         else if (enemyAnimator != null)
         {
             enemyAnimator.SetBool(isShootingBoolHash, false);
-            enemyAnimator.SetBool(keepShootingBoolHash, false);
+
+            if (!string.IsNullOrWhiteSpace(keepShootingBoolName))
+                enemyAnimator.SetBool(keepShootingBoolHash, false);
         }
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(false);
     }
 
-    private float GetRandomSpreadAngle()
+    private void KeepShootingStatusActive()
+    {
+        if (enemyStatus == null)
+            enemyStatus = transform.root.GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(true);
+    }
+
+    private float GetRandomSpreadAngle(List<float> list)
     {
         if (!useSpread)
             return 0f;
 
-        if (spreadAngleList == null || spreadAngleList.Count == 0)
+        if (list == null || list.Count == 0)
             return 0f;
 
-        int index = Random.Range(0, spreadAngleList.Count);
-        return Mathf.Max(0f, spreadAngleList[index]);
+        int index = Random.Range(0, list.Count);
+        return Mathf.Max(0f, list[index]);
     }
 
     private Vector3 ApplySpread(Vector3 baseDir, float spreadAngleDeg)
@@ -270,18 +498,22 @@ public class EnemyWeaponShooter : MonoBehaviour
 
     private void SpawnVisualProjectile(Vector3 origin, Vector3 dir)
     {
+        SpawnVisualProjectile(new Ray(origin, dir));
+    }
+
+    private void SpawnVisualProjectile(Ray shotRay)
+    {
         if (!spawnVisualProjectile || visualBulletProjectilePrefab == null)
             return;
 
         Vector3 visualOrigin = visualProjectileSpawnPoint != null
             ? visualProjectileSpawnPoint.position
-            : origin;
+            : shotRay.origin;
 
         Vector3 targetPoint;
 
         if (Physics.Raycast(
-            origin,
-            dir,
+            shotRay,
             out RaycastHit hit,
             bulletMaxDistance,
             bulletHitMask,
@@ -291,7 +523,7 @@ public class EnemyWeaponShooter : MonoBehaviour
         }
         else
         {
-            targetPoint = origin + dir * bulletMaxDistance;
+            targetPoint = shotRay.origin + shotRay.direction * bulletMaxDistance;
         }
 
         BulletProjectileVisual visualBullet =

@@ -19,6 +19,16 @@ namespace ASGS.Grenade
         [SerializeField] private GameObject explosionEffectPrefab;
         [SerializeField] private GameObject explosionObject;
 
+        [Header("Enemy Stun")]
+        [SerializeField] private bool stunEnemiesOnFlash = true;
+        [SerializeField] private float enemyStunRadius = 8f;
+        [SerializeField] private float enemyStunDuration = 3f;
+        [SerializeField] private float enemyFlashBangStatusDuration = 3f;
+        [SerializeField] private LayerMask enemyStunMask = ~0;
+        [SerializeField] private QueryTriggerInteraction enemyStunTriggerInteraction = QueryTriggerInteraction.Ignore;
+        [SerializeField] private bool requireLineOfSightToStun = false;
+        [SerializeField] private LayerMask stunObstructionMask = ~0;
+
         [Header("Spawned Effect Position")]
         [SerializeField] private bool useIdentityRotationForSpawnedEffect = true;
         [SerializeField] private Vector3 effectWorldOffset = new Vector3(0f, 1.2f, 0f);
@@ -188,10 +198,99 @@ namespace ASGS.Grenade
                 rootRB.useGravity = false;
             }
 
+            StunEnemies(flashPosition);
+
             Invoke(nameof(End), Mathf.Max(0f, endDelay));
 
             if (logState)
                 Debug.Log($"[Grenade_Flashbang_wPin] Flashed: {name}, FlashPosition={flashPosition}", this);
+        }
+
+        private void StunEnemies(Vector3 flashPosition)
+        {
+            if (!stunEnemiesOnFlash)
+                return;
+
+            float radius = Mathf.Max(0f, enemyStunRadius);
+
+            if (radius <= 0f)
+                return;
+
+            Collider[] hits = Physics.OverlapSphere(
+                flashPosition,
+                radius,
+                enemyStunMask,
+                enemyStunTriggerInteraction
+            );
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Collider hit = hits[i];
+
+                if (hit == null)
+                    continue;
+
+                global::EnemyStunReceiver stunReceiver =
+                    hit.GetComponentInParent<global::EnemyStunReceiver>();
+
+                if (stunReceiver == null)
+                    continue;
+
+                if (requireLineOfSightToStun &&
+                    IsStunLineBlocked(flashPosition, stunReceiver))
+                {
+                    continue;
+                }
+
+                stunReceiver.ForceFlashBangStun(
+                    enemyStunDuration,
+                    enemyFlashBangStatusDuration
+                );
+            }
+        }
+
+        private bool IsStunLineBlocked(
+            Vector3 flashPosition,
+            global::EnemyStunReceiver stunReceiver)
+        {
+            if (stunReceiver == null)
+                return true;
+
+            Vector3 targetPosition = stunReceiver.transform.position + Vector3.up * 1.2f;
+            Vector3 toTarget = targetPosition - flashPosition;
+            float distance = toTarget.magnitude;
+
+            if (distance <= 0.01f)
+                return false;
+
+            RaycastHit[] hits = Physics.RaycastAll(
+                flashPosition,
+                toTarget / distance,
+                distance,
+                stunObstructionMask,
+                QueryTriggerInteraction.Ignore
+            );
+
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Transform hitTransform = hits[i].transform;
+
+                if (hitTransform == null)
+                    continue;
+
+                if (hitTransform == transform || hitTransform.IsChildOf(transform))
+                    continue;
+
+                if (hitTransform == stunReceiver.transform ||
+                    hitTransform.IsChildOf(stunReceiver.transform))
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
         }
 
         private void ConfigureSpawnedEffect(GameObject spawnedEffect, Vector3 flashPosition)

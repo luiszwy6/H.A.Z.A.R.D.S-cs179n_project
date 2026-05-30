@@ -34,6 +34,7 @@ public partial class EnemyDeadAction : Action
     private EnemyShootLockController shootLockController;
     private EnemyWeaponShooter weaponShooter;
     private EnemyAnimatorParameterDriver animatorDriver;
+    private SquadMember squadMember;
     private Behaviour behaviorGraphAgent;
 
     private bool shootLockAdded;
@@ -49,6 +50,7 @@ public partial class EnemyDeadAction : Action
         shootLockController = self.GetComponent<EnemyShootLockController>();
         weaponShooter = self.GetComponentInChildren<EnemyWeaponShooter>(true);
         animatorDriver = self.GetComponent<EnemyAnimatorParameterDriver>();
+        squadMember = self.GetComponent<SquadMember>();
         behaviorGraphAgent = FindBehaviorGraphAgent(self);
 
         ApplyDeadState();
@@ -93,6 +95,9 @@ public partial class EnemyDeadAction : Action
 
         if (DisableBehaviorGraphAgent && behaviorGraphAgent != null)
             behaviorGraphAgent.enabled = false;
+
+        if (squadMember != null)
+            squadMember.MarkDead();
     }
 
     private void StopAgent()

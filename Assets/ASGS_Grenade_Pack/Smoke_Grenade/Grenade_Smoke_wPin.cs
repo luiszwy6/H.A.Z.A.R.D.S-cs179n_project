@@ -30,6 +30,11 @@ namespace ASGS.Grenade
         [SerializeField] private bool destroyThisObjectOnEnd = true;
         [SerializeField] private bool destroySmokeObjectOnEnd = true;
 
+        [Header("Vision Block")]
+        [SerializeField] private bool blockEnemyVision = true;
+        [SerializeField] private float visionBlockRadius = 6f;
+        [SerializeField] private float visionBlockDelay = 3f;
+
         [Header("Debug / Inspector Control")]
         [SerializeField] private bool debugArmNow = false;
         [SerializeField] private bool debugIgniteNow = false;
@@ -44,6 +49,7 @@ namespace ASGS.Grenade
         private bool hasIgnited = false;
         private bool hasSpawnedSmoke = false;
         private bool hasEnded = false;
+        private global::SmokeVisionBlocker smokeVisionBlocker;
 
         private void Awake()
         {
@@ -164,6 +170,19 @@ namespace ASGS.Grenade
             if (smokePrefab != null)
                 smokeObject = Instantiate(smokePrefab, transform.position, Quaternion.identity);
 
+            if (blockEnemyVision && smokeObject != null)
+            {
+                smokeVisionBlocker =
+                    smokeObject.GetComponent<global::SmokeVisionBlocker>();
+
+                if (smokeVisionBlocker == null)
+                    smokeVisionBlocker = smokeObject.AddComponent<global::SmokeVisionBlocker>();
+
+                smokeVisionBlocker.SetRadius(visionBlockRadius);
+                smokeVisionBlocker.SetBlockingEnabled(false);
+                Invoke(nameof(EnableSmokeVisionBlock), Mathf.Max(0f, visionBlockDelay));
+            }
+
             if (hideGrenadeVisualAfterSmokeSpawn)
                 HideGrenadeVisual();
 
@@ -175,6 +194,17 @@ namespace ASGS.Grenade
 
             if (logState)
                 Debug.Log($"[Grenade_Smoke_wPin] Smoke spawned: {name}", this);
+        }
+
+        private void EnableSmokeVisionBlock()
+        {
+            if (hasEnded)
+                return;
+
+            if (smokeVisionBlocker == null)
+                return;
+
+            smokeVisionBlocker.SetBlockingEnabled(true);
         }
 
         private void DestroyGrenadeMeshAfterDelay(float delayTime)
@@ -221,6 +251,10 @@ namespace ASGS.Grenade
                 return;
 
             hasEnded = true;
+            CancelInvoke(nameof(EnableSmokeVisionBlock));
+
+            if (smokeVisionBlocker != null)
+                smokeVisionBlocker.SetBlockingEnabled(false);
 
             if (destroySmokeObjectOnEnd && smokeObject != null)
                 Destroy(smokeObject);

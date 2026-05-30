@@ -10,8 +10,6 @@ public class SquadFightState : SquadState
     public override void Enter()
     {
         squadManager.SetTacticalOverrideActive(false);
-        squadManager.SetCancelLeadBy(true);
-        squadManager.SetCancelFormation(true);
     }
 
     public override void Tick()

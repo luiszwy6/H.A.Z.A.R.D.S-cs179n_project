@@ -19,7 +19,25 @@ public partial class EnemyShootAtTargetAction : Action
 
     [SerializeField] public bool RequireSensorCanSeeTarget = true;
 
+    [Header("Aim Control")]
+    [SerializeReference] public BlackboardVariable<bool> SetAnimatorAiming;
+    [SerializeReference] public BlackboardVariable<bool> Aiming;
+    [SerializeReference] public BlackboardVariable<bool> FaceTargetBeforeShooting;
+    [SerializeReference] public BlackboardVariable<float> FaceRotationSpeed;
+    [SerializeReference] public BlackboardVariable<bool> DisableAgentRotationWhileShooting;
+
+    [Header("Aim Gate")]
+    [SerializeReference] public BlackboardVariable<bool> RequireAnimatorAiming;
+    [SerializeReference] public BlackboardVariable<bool> RequireFacingTarget;
+    [SerializeReference] public BlackboardVariable<float> AimAngleTolerance;
+    [SerializeReference] public BlackboardVariable<bool> FailIfAimingParameterMissing;
+    [SerializeField] private string isAimingBoolName = "IsAiming";
+
+    [Header("Attack Adapter")]
+    [SerializeField] public bool PreferMeleeAttacker = false;
+
     private EnemyWeaponShooter shooter;
+    private EnemyMeleeAttacker meleeAttacker;
     private EnemySensor sensor;
 
     protected override Status OnStart()
@@ -28,9 +46,10 @@ public partial class EnemyShootAtTargetAction : Action
             return Status.Failure;
 
         shooter = Self.Value.GetComponentInChildren<EnemyWeaponShooter>(true);
+        meleeAttacker = Self.Value.GetComponentInChildren<EnemyMeleeAttacker>(true);
         sensor = Self.Value.GetComponent<EnemySensor>();
 
-        if (shooter == null)
+        if (shooter == null && meleeAttacker == null)
             return Status.Failure;
 
         return Status.Running;
@@ -38,10 +57,10 @@ public partial class EnemyShootAtTargetAction : Action
 
     protected override Status OnUpdate()
     {
-        if (shooter == null)
+        if (Target == null || Target.Value == null)
             return Status.Failure;
 
-        if (Target == null || Target.Value == null)
+        if (shooter == null && meleeAttacker == null)
             return Status.Failure;
 
         if (RequireSensorCanSeeTarget && sensor != null)
@@ -50,7 +69,7 @@ public partial class EnemyShootAtTargetAction : Action
 
             if (!sensor.CanSeeTarget)
             {
-                shooter.ForceClearRuntimeState();
+                ForceClearAttackRuntimeState();
                 return Status.Failure;
             }
         }
@@ -58,14 +77,101 @@ public partial class EnemyShootAtTargetAction : Action
         float heightOffset = TargetHeightOffset != null ? TargetHeightOffset.Value : 1.3f;
         Vector3 targetPoint = Target.Value.transform.position + Vector3.up * heightOffset;
 
-        shooter.ShootAt(targetPoint);
+        ApplyAimAndFacing(targetPoint);
 
-        return Status.Success;
+        if (!CanShootFromAimGate(targetPoint))
+        {
+            ForceClearAttackRuntimeState();
+            return Status.Running;
+        }
+
+        bool usedAttack = false;
+
+        if (PreferMeleeAttacker && meleeAttacker != null)
+        {
+            usedAttack = meleeAttacker.ShootAt(targetPoint);
+        }
+        else if (shooter != null)
+        {
+            usedAttack = shooter.ShootAt(targetPoint);
+        }
+        else if (meleeAttacker != null)
+        {
+            usedAttack = meleeAttacker.ShootAt(targetPoint);
+        }
+
+        return usedAttack ? Status.Success : Status.Failure;
     }
 
     protected override void OnEnd()
     {
+        ForceClearAttackRuntimeState();
+    }
+
+    private void ForceClearAttackRuntimeState()
+    {
         if (shooter != null)
             shooter.ForceClearRuntimeState();
+
+        if (meleeAttacker != null)
+            meleeAttacker.ForceClearRuntimeState();
+    }
+
+    private bool CanShootFromAimGate(Vector3 targetPoint)
+    {
+        return EnemyShootAimGate.CanShoot(
+            Self.Value,
+            targetPoint,
+            ResolveRequireAnimatorAiming(),
+            ResolveRequireFacingTarget(),
+            ResolveAimAngleTolerance(),
+            isAimingBoolName,
+            ResolveFailIfAimingParameterMissing()
+        );
+    }
+
+    private void ApplyAimAndFacing(Vector3 targetPoint)
+    {
+        EnemyShootAimGate.ApplyAimAndFacing(
+            Self.Value,
+            targetPoint,
+            EnemyShootAimGate.ResolveBool(SetAnimatorAiming, false),
+            EnemyShootAimGate.ResolveBool(Aiming, true),
+            EnemyShootAimGate.ResolveBool(FaceTargetBeforeShooting, false),
+            EnemyShootAimGate.ResolveFloat(FaceRotationSpeed, 12f),
+            EnemyShootAimGate.ResolveBool(DisableAgentRotationWhileShooting, true)
+        );
+    }
+
+    private bool ResolveRequireAnimatorAiming()
+    {
+        if (RequireAnimatorAiming == null)
+            return false;
+
+        return RequireAnimatorAiming.Value;
+    }
+
+    private bool ResolveRequireFacingTarget()
+    {
+        if (RequireFacingTarget == null)
+            return false;
+
+        return RequireFacingTarget.Value;
+    }
+
+    private float ResolveAimAngleTolerance()
+    {
+        if (AimAngleTolerance == null)
+            return 5f;
+
+        return Mathf.Max(0f, AimAngleTolerance.Value);
+    }
+
+    private bool ResolveFailIfAimingParameterMissing()
+    {
+        if (FailIfAimingParameterMissing == null)
+            return false;
+
+        return FailIfAimingParameterMissing.Value;
     }
 }

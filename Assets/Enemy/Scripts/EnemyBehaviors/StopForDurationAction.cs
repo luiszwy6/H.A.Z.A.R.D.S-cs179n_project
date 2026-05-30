@@ -46,7 +46,7 @@ public partial class StopForDurationAction : Action
         animatorDriver = Self.Value.GetComponent<EnemyAnimatorParameterDriver>();
         sensor = Self.Value.GetComponent<EnemySensor>();
 
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             cachedIsStopped = agent.isStopped;
             hasCachedStoppedState = true;
@@ -101,12 +101,16 @@ public partial class StopForDurationAction : Action
     {
         timer = 0f;
 
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+        {
+            hasCachedStoppedState = false;
             return;
+        }
 
         if (ResolveResumeAgentOnEnd())
         {
             agent.isStopped = false;
+            hasCachedStoppedState = false;
             return;
         }
 
@@ -175,7 +179,7 @@ public partial class StopForDurationAction : Action
     private bool ResolveResumeAgentOnEnd()
     {
         if (ResumeAgentOnEnd == null)
-            return false;
+            return true;
 
         return ResumeAgentOnEnd.Value;
     }

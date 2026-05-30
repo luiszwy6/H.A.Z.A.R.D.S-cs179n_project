@@ -59,6 +59,8 @@ public class WeaponAmmoSettings : MonoBehaviour
     private Coroutine reloadRoutine;
 
     private bool isReloading;
+    private bool infiniteAmmoMode;
+    private int oneByOneLoadPerRound = 1;
 
     private readonly Dictionary<Rig, float> cachedRigWeights = new Dictionary<Rig, float>();
 
@@ -78,6 +80,25 @@ public class WeaponAmmoSettings : MonoBehaviour
     public int CurrentReserveAmmo => totalAmmoSetter != null ? totalAmmoSetter.GetAmmoCount(ammoType) : 0;
     public bool IsReloading => isReloading;
     public bool IsMagazineFull => currentAmmoInMagazine >= magazineSize;
+    public bool InfiniteAmmoMode => infiniteAmmoMode;
+
+    public void SetInfiniteAmmoMode(bool value)
+    {
+        infiniteAmmoMode = value;
+
+        if (value && isReloading)
+            CancelReload();
+    }
+
+    public void SetOneByOneLoadPerRound(int amount)
+    {
+        oneByOneLoadPerRound = Mathf.Max(1, amount);
+    }
+
+    public void ForceSetCurrentAmmo(int amount)
+    {
+        currentAmmoInMagazine = Mathf.Clamp(amount, 0, magazineSize);
+    }
 
     private void Reset()
     {
@@ -151,6 +172,9 @@ public class WeaponAmmoSettings : MonoBehaviour
 
     public bool CanShoot()
     {
+        if (infiniteAmmoMode)
+            return true;
+
         return !isReloading && currentAmmoInMagazine > 0;
     }
 
@@ -174,6 +198,9 @@ public class WeaponAmmoSettings : MonoBehaviour
 
     public bool TryConsumeOneRound()
     {
+        if (infiniteAmmoMode)
+            return true;
+
         if (currentAmmoInMagazine <= 0)
             return false;
 
@@ -183,6 +210,9 @@ public class WeaponAmmoSettings : MonoBehaviour
 
     public bool CanReload()
     {
+        if (infiniteAmmoMode)
+            return false;
+
         if (isReloading)
             return false;
 
@@ -263,7 +293,8 @@ public class WeaponAmmoSettings : MonoBehaviour
 
             yield return new WaitForSecondsRealtime(oneByOneReloadDurationPerRound);
 
-            int loaded = totalAmmoSetter.ConsumeAmmo(ammoType, 1);
+            int toLoad = Mathf.Max(1, oneByOneLoadPerRound);
+            int loaded = totalAmmoSetter.ConsumeAmmo(ammoType, toLoad);
 
             if (loaded <= 0)
                 break;

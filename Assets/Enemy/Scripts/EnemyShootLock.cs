@@ -12,10 +12,19 @@ public class EnemyShootLockController : MonoBehaviour
     [SerializeField] private bool clearShootingWhileLocked = true;
     [SerializeField] private bool restoreShootLockOnUnlock = true;
 
+    [Header("Debug")]
+    [SerializeField] private int debugLockCount;
+    [SerializeField] private bool debugIsShootLocked;
+
     private int lockCount;
 
     private bool cachedExternalShootLock;
     private bool hasCachedShootState;
+
+    public int LockCount
+    {
+        get { return lockCount; }
+    }
 
     public bool IsShootLocked
     {
@@ -33,6 +42,8 @@ public class EnemyShootLockController : MonoBehaviour
 
     private void LateUpdate()
     {
+        UpdateDebugState();
+
         if (!IsShootLocked)
             return;
 
@@ -42,6 +53,7 @@ public class EnemyShootLockController : MonoBehaviour
     public void AddShootLock()
     {
         lockCount++;
+        UpdateDebugState();
 
         if (lockCount == 1)
         {
@@ -53,6 +65,7 @@ public class EnemyShootLockController : MonoBehaviour
     public void RemoveShootLock()
     {
         lockCount = Mathf.Max(0, lockCount - 1);
+        UpdateDebugState();
 
         if (lockCount == 0)
             RestoreShootState();
@@ -61,7 +74,14 @@ public class EnemyShootLockController : MonoBehaviour
     public void ClearShootLocks()
     {
         lockCount = 0;
+        UpdateDebugState();
         RestoreShootState();
+    }
+
+    private void UpdateDebugState()
+    {
+        debugLockCount = lockCount;
+        debugIsShootLocked = IsShootLocked;
     }
 
     private void ApplyLock()

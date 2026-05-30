@@ -26,6 +26,7 @@ public partial class UpdateEnemySensorAction : Action
     [SerializeField] public bool DebugLog = false;
 
     private EnemySensor sensor;
+    private EnemyStatus enemyStatus;
 
     protected override Status OnStart()
     {
@@ -36,6 +37,8 @@ public partial class UpdateEnemySensorAction : Action
 
         if (sensor == null)
             return Status.Failure;
+
+        enemyStatus = Self.Value.GetComponent<EnemyStatus>();
 
         if (Target != null && Target.Value != null)
             sensor.SetTarget(Target.Value.transform);
@@ -56,6 +59,9 @@ public partial class UpdateEnemySensorAction : Action
 
         if (CanSeeTarget != null)
             CanSeeTarget.Value = sensor.CanSeeTarget;
+
+        if (enemyStatus != null)
+            enemyStatus.SetCanSeeTarget(sensor.CanSeeTarget);
 
         if (DistanceToTarget != null)
             DistanceToTarget.Value = sensor.DistanceToTarget;

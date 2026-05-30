@@ -69,8 +69,13 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private string deathTriggerName = "DieTrigger";
 
     [Header("Death Component Disable")]
-    [SerializeField] private bool disableBehavioursOnDeath = false;
-    [SerializeField] private Behaviour[] behavioursToDisableOnDeath;
+    [SerializeField] private bool disableBehavioursOnDeath = true;
+    [SerializeField] private bool keepAnimatorEnabled = true;
+    [SerializeField] private bool includeChildBehaviours = true;
+    [Tooltip("These components will stay enabled after death.")]
+    [SerializeField] private Behaviour[] behavioursToKeepEnabled;
+    [Tooltip("These components will be disabled even if not found by the scan.")]
+    [SerializeField] private Behaviour[] extraBehavioursToDisable;
 
     [Header("Events")]
     public UnityEvent onDamaged;
@@ -89,6 +94,11 @@ public class PlayerHealth : MonoBehaviour
     public float CurrentHealth => currentHealth;
     public int CurrentArmorLevel => Mathf.Clamp(armorLevel, 0, 2);
     public bool IsDead => isDead;
+
+    public void SetArmorLevel(int value)
+    {
+        armorLevel = Mathf.Clamp(value, 0, 2);
+    }
     public PlayerHitboxBinding[] Hitboxes => hitboxes;
 
     private void Awake()
@@ -356,20 +366,55 @@ public class PlayerHealth : MonoBehaviour
 
     private void DisableDeathBehaviours()
     {
-        if (behavioursToDisableOnDeath == null)
-            return;
+        System.Collections.Generic.HashSet<Behaviour> keepEnabled =
+            new System.Collections.Generic.HashSet<Behaviour>();
 
-        for (int i = 0; i < behavioursToDisableOnDeath.Length; i++)
+        keepEnabled.Add(this);
+
+        if (keepAnimatorEnabled)
         {
-            Behaviour behaviour = behavioursToDisableOnDeath[i];
+            Animator[] animators = GetComponentsInChildren<Animator>(true);
+            for (int i = 0; i < animators.Length; i++)
+            {
+                if (animators[i] != null)
+                    keepEnabled.Add(animators[i]);
+            }
+        }
 
-            if (behaviour == null)
-                continue;
+        if (behavioursToKeepEnabled != null)
+        {
+            for (int i = 0; i < behavioursToKeepEnabled.Length; i++)
+            {
+                if (behavioursToKeepEnabled[i] != null)
+                    keepEnabled.Add(behavioursToKeepEnabled[i]);
+            }
+        }
 
-            if (behaviour == this)
+        Behaviour[] behaviours = includeChildBehaviours
+            ? GetComponentsInChildren<Behaviour>(true)
+            : GetComponents<Behaviour>();
+
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            Behaviour behaviour = behaviours[i];
+
+            if (behaviour == null || keepEnabled.Contains(behaviour))
                 continue;
 
             behaviour.enabled = false;
+        }
+
+        if (extraBehavioursToDisable != null)
+        {
+            for (int i = 0; i < extraBehavioursToDisable.Length; i++)
+            {
+                Behaviour behaviour = extraBehavioursToDisable[i];
+
+                if (behaviour == null || keepEnabled.Contains(behaviour))
+                    continue;
+
+                behaviour.enabled = false;
+            }
         }
     }
 
