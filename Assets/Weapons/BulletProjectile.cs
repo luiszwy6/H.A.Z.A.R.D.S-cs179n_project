@@ -355,6 +355,7 @@ public class BulletProjectile : MonoBehaviour
     private bool HandlePlayerHit(RaycastHit hit, PlayerHealth playerHealth)
     {
         bool playerHandled = false;
+        float appliedDamage = 0f;
 
         if (applyEnemyHealthDamage)
         {
@@ -363,7 +364,7 @@ public class BulletProjectile : MonoBehaviour
                 runtimeBaseDamage,
                 ArmoPierLevel,
                 runtimeKnockbackValue,
-                out float appliedDamage,
+                out appliedDamage,
                 out bool triggeredKnockback
             );
 
@@ -378,6 +379,12 @@ public class BulletProjectile : MonoBehaviour
 
         if (playHitPartShake)
             TryPlayHitPartShake(hit);
+
+        if (playerHandled && appliedDamage > 0f && playHitPartBlood)
+            TryPlayHitPartBlood(hit);
+
+        if (playerHandled && appliedDamage > 0f && playEnemyHitAudio)
+            TryPlayEnemyRangedHitAudio(hit, appliedDamage, playerHealth.IsDead);
 
         if (!playerHandled)
             return destroyOnAnyHit;

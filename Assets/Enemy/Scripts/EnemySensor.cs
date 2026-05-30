@@ -10,6 +10,7 @@ public class EnemySensor : MonoBehaviour
     [Header("Target")]
     [SerializeField] private Transform target;
     [SerializeField] private Transform targetVisionPoint;
+    [SerializeField] private EnemyStatus enemyStatus;
 
     [Header("Last Known Position Marker")]
     [SerializeField] private Transform lastKnownPositionMarker;
@@ -37,6 +38,17 @@ public class EnemySensor : MonoBehaviour
     [SerializeField] private float lostSightDelay = 2f;
     [SerializeField] private bool requireLineOfSightForLostSightVision = true;
 
+    [Header("Damage Reveal")]
+    [SerializeField] private bool allowDamageReveal = true;
+    [SerializeField] private bool damageRevealIgnoresInvisibility = true;
+    [Min(0f)] [SerializeField] private float defaultDamageRevealDuration = 2f;
+
+    [Header("Squad Reveal")]
+    [SerializeField] private bool shareCanSeeTargetWithSquad = true;
+    [SerializeField] private bool acceptSquadReveal = true;
+    [Min(0f)] [SerializeField] private float squadRevealDuration = 2f;
+    [Min(0f)] [SerializeField] private float squadRevealShareCooldown = 0.25f;
+
     [Header("Last Known Position Update Rules")]
     [SerializeField] private bool rememberLastKnownPosition = true;
     [SerializeField] private bool updateLastKnownInMainVision = true;
@@ -45,12 +57,17 @@ public class EnemySensor : MonoBehaviour
 
     [SerializeField] private Vector3 lastKnownPosition;
     [SerializeField] private bool hasLastKnownPosition;
+    [SerializeField] private bool lastKnownPositionLockedByCamo;
 
     [Header("Occlusion")]
     [SerializeField] private bool useOcclusion = true;
     [SerializeField] private LayerMask obstructionMask = ~0;
     [SerializeField] private QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
     [SerializeField] private float occlusionPadding = 0.05f;
+
+    [Header("Smoke Vision Block")]
+    [SerializeField] private bool useSmokeVisionBlockers = true;
+    [SerializeField] private bool debugSmokeVisionBlock = false;
 
     [Header("Auto Update")]
     [SerializeField] private bool autoUpdate = true;
@@ -69,6 +86,10 @@ public class EnemySensor : MonoBehaviour
     [SerializeField] private bool targetInMainVision;
     [SerializeField] private bool targetInLostSightVision;
     [SerializeField] private bool hasLineOfSight;
+    [SerializeField] private bool damageRevealActive;
+    [SerializeField] private float damageRevealEndTime = -999f;
+    [SerializeField] private bool canShareCurrentRevealWithSquad;
+    private float nextSquadRevealShareTime = -999f;
 
     public Transform Target
     {
@@ -128,6 +149,9 @@ public class EnemySensor : MonoBehaviour
 
     private void Awake()
     {
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
         EnsureLastKnownPositionMarker();
     }
 
@@ -170,6 +194,9 @@ public class EnemySensor : MonoBehaviour
         if (target == null)
         {
             canSeeTarget = false;
+            UploadCanSeeTargetStatus();
+            UploadSmokeBlockingVisionStatus(false);
+            canShareCurrentRevealWithSquad = false;
             distanceToTarget = 0f;
             targetLocked = false;
             lostSightTimer = 0f;
@@ -180,6 +207,52 @@ public class EnemySensor : MonoBehaviour
         }
 
         distanceToTarget = Vector3.Distance(transform.position, target.position);
+
+        bool smokeBlockingVision = IsTargetLineBlockedBySmoke();
+        UploadSmokeBlockingVisionStatus(smokeBlockingVision);
+
+        if (smokeBlockingVision)
+        {
+            canSeeTarget = false;
+            UploadCanSeeTargetStatus();
+            canShareCurrentRevealWithSquad = false;
+            targetInMainVision = false;
+            targetInLostSightVision = false;
+            hasLineOfSight = false;
+            return;
+        }
+
+        if (IsTargetInvisible())
+        {
+            if (!lastKnownPositionLockedByCamo)
+                LockLastKnownPositionAt(target.position, target.rotation);
+
+            canSeeTarget = false;
+            UploadCanSeeTargetStatus();
+            canShareCurrentRevealWithSquad = false;
+            targetLocked = false;
+            lostSightTimer = 0f;
+            targetInMainVision = false;
+            targetInLostSightVision = false;
+            hasLineOfSight = false;
+            return;
+        }
+
+        if (IsDamageRevealActive())
+        {
+            canSeeTarget = true;
+            UploadCanSeeTargetStatus();
+            TryShareTargetWithSquad();
+            targetLocked = true;
+            lostSightTimer = 0f;
+            targetInMainVision = true;
+            targetInLostSightVision = false;
+            hasLineOfSight = true;
+            UnlockCamoLastKnownPosition();
+            UpdateLastKnownPositionMarker();
+            return;
+        }
+
         hasLineOfSight = HasLineOfSight();
 
         targetInMainVision =
@@ -195,8 +268,13 @@ public class EnemySensor : MonoBehaviour
         if (targetInMainVision)
         {
             canSeeTarget = true;
+            UploadCanSeeTargetStatus();
+            canShareCurrentRevealWithSquad = true;
+            TryShareTargetWithSquad();
             targetLocked = true;
             lostSightTimer = 0f;
+
+            UnlockCamoLastKnownPosition();
 
             if (updateLastKnownInMainVision)
                 UpdateLastKnownPositionMarker();
@@ -207,8 +285,13 @@ public class EnemySensor : MonoBehaviour
         if (targetInLostSightVision)
         {
             canSeeTarget = true;
+            UploadCanSeeTargetStatus();
+            canShareCurrentRevealWithSquad = true;
+            TryShareTargetWithSquad();
             targetLocked = true;
             lostSightTimer = 0f;
+
+            UnlockCamoLastKnownPosition();
 
             if (updateLastKnownInLostSightVision)
                 UpdateLastKnownPositionMarker();
@@ -223,6 +306,9 @@ public class EnemySensor : MonoBehaviour
             if (lostSightTimer < lostSightDelay)
             {
                 canSeeTarget = true;
+                UploadCanSeeTargetStatus();
+                canShareCurrentRevealWithSquad = true;
+                TryShareTargetWithSquad();
 
                 if (updateLastKnownDuringLostSightDelay)
                     UpdateLastKnownPositionMarker();
@@ -234,11 +320,178 @@ public class EnemySensor : MonoBehaviour
                 UpdateLastKnownPositionMarker();
 
             canSeeTarget = false;
+            UploadCanSeeTargetStatus();
             targetLocked = false;
             return;
         }
 
         canSeeTarget = false;
+        UploadCanSeeTargetStatus();
+        canShareCurrentRevealWithSquad = false;
+    }
+
+    public void RevealTargetFromDamage(float duration = -1f)
+    {
+        if (!allowDamageReveal)
+            return;
+
+        Transform revealTarget = target;
+
+        if (revealTarget == null && PlayerStatus.Instance != null)
+            revealTarget = PlayerStatus.Instance.transform;
+
+        if (revealTarget == null)
+            return;
+
+        target = revealTarget;
+
+        if (!damageRevealIgnoresInvisibility && IsTargetInvisible())
+            return;
+
+        float revealDuration = duration >= 0f
+            ? duration
+            : defaultDamageRevealDuration;
+
+        revealDuration = Mathf.Max(0f, revealDuration);
+
+        ApplyTimedReveal(revealTarget, revealDuration, true);
+        TryShareTargetWithSquad();
+    }
+
+    public void RevealTargetFromSquad(Transform revealTarget, float duration = -1f)
+    {
+        if (!acceptSquadReveal)
+            return;
+
+        if (revealTarget == null)
+            return;
+
+        if (!damageRevealIgnoresInvisibility)
+        {
+            PlayerStatus playerStatus = revealTarget.GetComponentInParent<PlayerStatus>();
+
+            if (playerStatus == null)
+                playerStatus = revealTarget.GetComponentInChildren<PlayerStatus>();
+
+            if (playerStatus != null && playerStatus.IsInvisible)
+                return;
+        }
+
+        float revealDuration = duration >= 0f
+            ? duration
+            : squadRevealDuration;
+
+        ApplyTimedReveal(revealTarget, revealDuration, false);
+    }
+
+    private void ApplyTimedReveal(Transform revealTarget, float duration, bool shareWithSquad)
+    {
+        target = revealTarget;
+
+        if (IsTargetInvisible())
+        {
+            if (!lastKnownPositionLockedByCamo)
+                LockLastKnownPositionAt(target.position, target.rotation);
+
+            canSeeTarget = false;
+            targetLocked = false;
+            lostSightTimer = 0f;
+            damageRevealActive = false;
+            canShareCurrentRevealWithSquad = false;
+            targetInMainVision = false;
+            targetInLostSightVision = false;
+            hasLineOfSight = false;
+            UploadCanSeeTargetStatus();
+            return;
+        }
+
+        duration = Mathf.Max(0f, duration);
+        damageRevealActive = true;
+        damageRevealEndTime = Time.time + duration;
+        canShareCurrentRevealWithSquad = shareWithSquad;
+        canSeeTarget = true;
+        targetLocked = true;
+        lostSightTimer = 0f;
+
+        UnlockCamoLastKnownPosition();
+        UpdateLastKnownPositionMarker();
+        UploadCanSeeTargetStatus();
+    }
+
+    private bool IsDamageRevealActive()
+    {
+        if (!damageRevealActive)
+            return false;
+
+        if (Time.time <= damageRevealEndTime)
+            return true;
+
+        damageRevealActive = false;
+        canShareCurrentRevealWithSquad = false;
+        return false;
+    }
+
+    private void TryShareTargetWithSquad()
+    {
+        if (!shareCanSeeTargetWithSquad)
+            return;
+
+        if (!canShareCurrentRevealWithSquad)
+            return;
+
+        if (target == null)
+            return;
+
+        if (Time.time < nextSquadRevealShareTime)
+            return;
+
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
+        SquadMember squadMember = enemyStatus != null
+            ? enemyStatus.SquadMember
+            : GetComponent<SquadMember>();
+
+        if (squadMember == null || squadMember.SquadManager == null)
+            return;
+
+        nextSquadRevealShareTime = Time.time + Mathf.Max(0f, squadRevealShareCooldown);
+        squadMember.SquadManager.RevealTargetToTeammates(
+            squadMember,
+            target,
+            squadRevealDuration
+        );
+    }
+
+    private void UploadCanSeeTargetStatus()
+    {
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+            enemyStatus.SetCanSeeTarget(canSeeTarget);
+    }
+
+    private void UploadSmokeBlockingVisionStatus(bool value)
+    {
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+            enemyStatus.SetSmokeBlockingVision(value);
+    }
+
+    private bool IsTargetInvisible()
+    {
+        if (target == null)
+            return false;
+
+        PlayerStatus playerStatus = target.GetComponentInParent<PlayerStatus>();
+
+        if (playerStatus == null)
+            playerStatus = target.GetComponentInChildren<PlayerStatus>();
+
+        return playerStatus != null && playerStatus.IsInvisible;
     }
 
     private void UpdateLastKnownPositionMarker()
@@ -246,19 +499,80 @@ public class EnemySensor : MonoBehaviour
         if (!rememberLastKnownPosition || target == null)
             return;
 
-        lastKnownPosition = target.position;
+        if (lastKnownPositionLockedByCamo)
+            return;
+
+        SetLastKnownPosition(target.position, target.rotation);
+    }
+
+    private void SetLastKnownPosition(
+        Vector3 position,
+        Quaternion rotation,
+        bool forceMarkerUpdate = false)
+    {
+        lastKnownPosition = position;
         hasLastKnownPosition = true;
 
-        if (lastKnownPositionMarker != null && updateMarkerWhileTargetLocked)
+        if (lastKnownPositionMarker != null &&
+            (updateMarkerWhileTargetLocked || forceMarkerUpdate))
         {
-            lastKnownPositionMarker.position = target.position;
-            lastKnownPositionMarker.rotation = target.rotation;
+            lastKnownPositionMarker.position = position;
+            lastKnownPositionMarker.rotation = rotation;
         }
+    }
+
+    private void LockLastKnownPositionAt(Vector3 position, Quaternion rotation)
+    {
+        SetLastKnownPosition(position, rotation, true);
+        lastKnownPositionLockedByCamo = true;
+    }
+
+    private void UnlockCamoLastKnownPosition()
+    {
+        lastKnownPositionLockedByCamo = false;
+    }
+
+    public void LockLastKnownPositionForInvisibleTarget(Transform invisibleTarget, Vector3 position)
+    {
+        if (invisibleTarget == null)
+            return;
+
+        if (target != null && !IsSameTargetHierarchy(target, invisibleTarget))
+            return;
+
+        if (target == null)
+            target = invisibleTarget;
+
+        LockLastKnownPositionAt(position, invisibleTarget.rotation);
+        canSeeTarget = false;
+        targetLocked = false;
+        lostSightTimer = 0f;
+        damageRevealActive = false;
+        canShareCurrentRevealWithSquad = false;
+        targetInMainVision = false;
+        targetInLostSightVision = false;
+        hasLineOfSight = false;
+
+        UploadCanSeeTargetStatus();
+    }
+
+    private bool IsSameTargetHierarchy(Transform first, Transform second)
+    {
+        if (first == null || second == null)
+            return false;
+
+        if (first == second)
+            return true;
+
+        return first.IsChildOf(second) ||
+               second.IsChildOf(first) ||
+               first.root == second.root;
     }
 
     public void ClearLastKnownPosition()
     {
         hasLastKnownPosition = false;
+        lastKnownPositionLockedByCamo = false;
     }
 
     public void ClearTargetLock()
@@ -266,6 +580,9 @@ public class EnemySensor : MonoBehaviour
         canSeeTarget = false;
         targetLocked = false;
         lostSightTimer = 0f;
+        damageRevealActive = false;
+        canShareCurrentRevealWithSquad = false;
+        lastKnownPositionLockedByCamo = false;
     }
 
     public Vector3 GetEyePosition()
@@ -343,6 +660,14 @@ public class EnemySensor : MonoBehaviour
 
         Vector3 direction = toTarget / distance;
 
+        if (IsSmokeVisionBlocking(eyePosition, targetPosition))
+        {
+            if (debugDrawRay && Application.isPlaying)
+                Debug.DrawLine(eyePosition, targetPosition, Color.gray, debugRayDuration, true);
+
+            return false;
+        }
+
         bool blocked = Physics.Raycast(
             eyePosition,
             direction,
@@ -364,6 +689,41 @@ public class EnemySensor : MonoBehaviour
         }
 
         return !blocked;
+    }
+
+    private bool IsTargetLineBlockedBySmoke()
+    {
+        if (target == null)
+            return false;
+
+        return IsSmokeVisionBlocking(
+            GetEyePosition(),
+            GetTargetVisionPosition()
+        );
+    }
+
+    private bool IsSmokeVisionBlocking(Vector3 eyePosition, Vector3 targetPosition)
+    {
+        if (!useSmokeVisionBlockers)
+            return false;
+
+        SmokeVisionBlocker blocker = SmokeVisionBlocker.GetBlockingBlocker(
+            eyePosition,
+            targetPosition
+        );
+
+        if (blocker == null)
+            return false;
+
+        if (debugSmokeVisionBlock)
+        {
+            Debug.Log(
+                $"[EnemySensor] Smoke blocked vision. Enemy={name}, Smoke={blocker.name}, ActiveSmokeCount={SmokeVisionBlocker.ActiveCount}",
+                this
+            );
+        }
+
+        return true;
     }
 
     private bool IsTargetHit(Transform hitTransform)

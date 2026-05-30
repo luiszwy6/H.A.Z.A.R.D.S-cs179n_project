@@ -1,73 +1,57 @@
+using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 [DisallowMultipleComponent]
 public class SquadMember : MonoBehaviour
 {
     [Header("Squad")]
     [SerializeField] private SquadManager squadManager;
-    [SerializeField] private SquadRole squadRole;
-
-    [Header("Personal Goal")]
-    [SerializeField] private Transform personalGoal;
-
-    [Header("Movement Optional")]
-    [SerializeField] private bool autoSetAgentDestination = false;
-    [SerializeField] private NavMeshAgent agent;
+    [SerializeField] private SquadEnemyType enemyType = SquadEnemyType.AR;
+    [SerializeField] private EnemyStatus enemyStatus;
 
     [Header("State")]
     [SerializeField] private bool isAlive = true;
 
-    public SquadRole StartingRole { get; private set; }
-    public SquadRole CurrentRole { get; private set; }
+    private readonly List<EnemyStatus> teammateStatusesCache = new List<EnemyStatus>();
 
     public bool IsAlive
     {
         get { return isAlive; }
     }
 
-    public SquadRole Role
+    public SquadEnemyType EnemyType
     {
-        get { return squadRole; }
+        get { return enemyType; }
     }
 
-    public Transform PersonalGoal
+    public EnemyStatus Status
     {
-        get { return personalGoal; }
+        get { return enemyStatus; }
     }
 
-    public Transform CurrentMoveTarget { get; private set; }
-    public bool IsUsingSquadGoal { get; private set; }
-
-    private bool hasMovePosition;
-    private Vector3 currentMovePosition;
-
-    public bool IsSniper
+    public SquadManager SquadManager
     {
-        get { return squadRole == SquadRole.Sniper; }
+        get { return squadManager; }
     }
 
-    public Vector3 CurrentMovePosition
+    public IReadOnlyList<EnemyStatus> TeammateStatuses
     {
         get
         {
-            if (hasMovePosition)
-                return currentMovePosition;
-
-            if (CurrentMoveTarget != null)
-                return CurrentMoveTarget.position;
-
-            return transform.position;
+            RefreshTeammateStatusesCache();
+            return teammateStatusesCache;
         }
+    }
+
+    public bool IsSniper
+    {
+        get { return enemyType == SquadEnemyType.Sniper; }
     }
 
     private void Awake()
     {
-        StartingRole = squadRole;
-        CurrentRole = squadRole;
-
-        if (agent == null)
-            agent = GetComponent<NavMeshAgent>();
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
 
         if (squadManager == null)
             squadManager = GetComponentInParent<SquadManager>();
@@ -90,14 +74,15 @@ public class SquadMember : MonoBehaviour
         squadManager = manager;
     }
 
-    public void SetCurrentRole(SquadRole newRole)
+    public void SetEnemyType(SquadEnemyType type)
     {
-        CurrentRole = newRole;
-    }
+        if (enemyType == type)
+            return;
 
-    public void ResetCurrentRole()
-    {
-        CurrentRole = StartingRole;
+        enemyType = type;
+
+        if (squadManager != null)
+            squadManager.RefreshMemberTypeLists();
     }
 
     public void SetAlive(bool alive)
@@ -116,45 +101,21 @@ public class SquadMember : MonoBehaviour
         SetAlive(false);
     }
 
-    public void SetPersonalGoal(Transform goal)
+    public void GetTeammateStatuses(List<EnemyStatus> results, bool includeDead = false)
     {
-        personalGoal = goal;
+        if (results == null)
+            return;
+
+        results.Clear();
+
+        if (squadManager == null)
+            return;
+
+        squadManager.GetTeammateStatuses(this, results, includeDead);
     }
 
-    public void SetMoveTarget(Transform target, bool usingSquadGoal)
+    private void RefreshTeammateStatusesCache()
     {
-        CurrentMoveTarget = target;
-        IsUsingSquadGoal = usingSquadGoal;
-        hasMovePosition = false;
-
-        if (autoSetAgentDestination && agent != null && CurrentMoveTarget != null && isAlive)
-        {
-            agent.isStopped = false;
-            agent.SetDestination(CurrentMoveTarget.position);
-        }
-    }
-
-    public void SetMovePosition(Vector3 position, bool usingSquadGoal)
-    {
-        CurrentMoveTarget = null;
-        currentMovePosition = position;
-        hasMovePosition = true;
-        IsUsingSquadGoal = usingSquadGoal;
-
-        if (autoSetAgentDestination && agent != null && isAlive)
-        {
-            agent.isStopped = false;
-            agent.SetDestination(currentMovePosition);
-        }
-    }
-
-    public void ClearMoveTarget()
-    {
-        CurrentMoveTarget = null;
-        IsUsingSquadGoal = false;
-        hasMovePosition = false;
-
-        if (autoSetAgentDestination && agent != null)
-            agent.isStopped = true;
+        GetTeammateStatuses(teammateStatusesCache);
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Animations.Rigging;
@@ -8,6 +9,8 @@ using UnityEngine.Animations.Rigging;
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerGrenadeThrower : MonoBehaviour
 {
+    public event Action ThrowStarted;
+
     [Header("References")]
     [SerializeField] private PlayerInput playerInput;
     [SerializeField] private Animator animator;
@@ -295,6 +298,8 @@ public class PlayerGrenadeThrower : MonoBehaviour
             Debug.DrawRay(origin, throwFacingDirection * 2f, Color.cyan, debugDrawDuration, false);
         }
 
+        ThrowStarted?.Invoke();
+
         if (logThrow)
         {
             PlayerGrenadeSlots.GrenadeSlot previewSlot = grenadeSlots != null ? grenadeSlots.CurrentSlot : null;
@@ -417,6 +422,7 @@ public class PlayerGrenadeThrower : MonoBehaviour
 
         Quaternion rotation = ResolveSpawnRotation(velocity);
         GrenadeWorldController instance = Instantiate(slot.worldPrefab, spawnPosition, rotation);
+        instance.SetGrenadeType(slot.grenadeType);
 
         instance.Launch(
             gameObject,

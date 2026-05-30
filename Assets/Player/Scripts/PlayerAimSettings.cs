@@ -30,6 +30,10 @@ public class PlayerAimSettings : MonoBehaviour
     public bool IsAimInputHeld => aimAction != null && aimAction.IsPressed();
     public bool AimInputPressedThisFrame => aimAction != null && aimAction.WasPressedThisFrame();
 
+    public bool IsRealAimHeld => aimHeldState && !externalAimOverride;
+
+    public bool IsExternalAimOverrideActive => externalAimOverride;
+
     public Vector2 LookInput { get; private set; }
     public bool UsingMouseScheme { get; private set; }
 
@@ -37,6 +41,7 @@ public class PlayerAimSettings : MonoBehaviour
     public Vector3 AimPointClamped { get; private set; }
     public bool HasMouseAimPoint { get; private set; }
     public Vector3 MouseAimPoint { get; private set; }
+    
 
     private PlayerInput playerInput;
     private InputAction lookAction;

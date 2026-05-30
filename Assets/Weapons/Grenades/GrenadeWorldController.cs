@@ -1,14 +1,22 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Rigidbody))]
 public class GrenadeWorldController : MonoBehaviour
 {
+    public static readonly List<GrenadeWorldController> ActiveGrenades =
+        new List<GrenadeWorldController>();
+
     [Header("Refs")]
     [SerializeField] private Rigidbody rb;
     [SerializeField] private Transform effectRoot;
     [SerializeField] private GameObject visualRoot;
+
+    [Header("Type")]
+    [SerializeField] private PlayerGrenadeSlots.GrenadeType grenadeType =
+        PlayerGrenadeSlots.GrenadeType.Frag;
 
     [Header("Existing Prefab Grenade Script")]
     [SerializeField] private bool triggerExistingGrenadeScriptOnLaunch = true;
@@ -69,6 +77,8 @@ public class GrenadeWorldController : MonoBehaviour
     public bool Launched => launched;
     public bool Armed => armed;
     public bool Activated => activated;
+    public PlayerGrenadeSlots.GrenadeType GrenadeType => grenadeType;
+    public bool IsActiveThreat => isActiveAndEnabled && launched && !activated;
 
     private void Reset()
     {
@@ -90,6 +100,8 @@ public class GrenadeWorldController : MonoBehaviour
 
     private void OnDisable()
     {
+        ActiveGrenades.Remove(this);
+
         StopRestoreOwnerCollisionRoutineOnly();
 
         if (ownerCollisionIgnored)
@@ -179,6 +191,11 @@ public class GrenadeWorldController : MonoBehaviour
         }
     }
 
+    public void SetGrenadeType(PlayerGrenadeSlots.GrenadeType type)
+    {
+        grenadeType = type;
+    }
+
     public void Arm()
     {
         if (activated)
@@ -198,6 +215,7 @@ public class GrenadeWorldController : MonoBehaviour
 
         activated = true;
         armed = false;
+        ActiveGrenades.Remove(this);
 
         StopRestoreOwnerCollisionRoutineOnly();
 
@@ -317,6 +335,9 @@ public class GrenadeWorldController : MonoBehaviour
 
         rb.isKinematic = false;
         rb.useGravity = true;
+
+        if (!ActiveGrenades.Contains(this))
+            ActiveGrenades.Add(this);
     }
 
     private void SetCollidersEnabled(bool enabled)

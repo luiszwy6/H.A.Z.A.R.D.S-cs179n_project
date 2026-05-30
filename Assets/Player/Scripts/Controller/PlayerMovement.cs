@@ -69,6 +69,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("External Locks")]
     public bool externalMovementLock = false;
+    public bool externalAnimatorLocomotionLock = false;
 
     private Animator animator;
     private CharacterController controller;
@@ -113,6 +114,7 @@ public class PlayerMovement : MonoBehaviour
 
     private bool hasMoveInput;
     private Vector3 desiredFacingDir = Vector3.forward;
+    private Vector3 cachedMoveDirWorld;
 
     private float animSpeed;
     private float animSpeedX;
@@ -122,6 +124,11 @@ public class PlayerMovement : MonoBehaviour
     private bool isWalkingState;
     private bool isRunningState;
 
+    private bool externalCrouchLock;
+    private bool externalCrouchLockValue;
+    private bool crouchStateBeforeExternalLock;
+    private bool proneStateBeforeExternalLock;
+
     private static readonly int SlideTriggerHash = Animator.StringToHash("SlideTrigger");
     private static readonly int IsSlideHash = Animator.StringToHash("IsSlide");
 
@@ -130,6 +137,8 @@ public class PlayerMovement : MonoBehaviour
     public bool IsRunningNow => isRunningState;
     public bool IsDivingNow => isDiving;
     public bool IsSlidingNow => isSliding;
+    public bool IsCrouchingNow => isCrouching;
+    public bool IsProneNow => isProne;
 
     public bool IsRecoveryLockedNow =>
         Time.time < postDiveLockUntilTime || Time.time < postSlideLockUntilTime;
@@ -219,6 +228,8 @@ public class PlayerMovement : MonoBehaviour
         crouchAction?.Disable();
         diveAction?.Disable();
         proneAction?.Disable();
+
+        externalCrouchLock = false;
     }
 
     public void SetActiveView(PlayerMovementViewBase view)
@@ -228,6 +239,61 @@ public class PlayerMovement : MonoBehaviour
 
         activeView = view;
         activeView.ResetView(transform);
+    }
+
+    public void SetExternalCrouchLock(bool active, bool crouched)
+    {
+        if (active)
+        {
+            if (!externalCrouchLock)
+            {
+                crouchStateBeforeExternalLock = isCrouching;
+                proneStateBeforeExternalLock = isProne;
+            }
+
+            externalCrouchLock = true;
+            externalCrouchLockValue = crouched;
+
+            ApplyExternalCrouchLockState();
+            return;
+        }
+
+        if (!externalCrouchLock)
+            return;
+
+        externalCrouchLock = false;
+
+        isCrouching = crouchStateBeforeExternalLock;
+        isProne = proneStateBeforeExternalLock;
+
+        proneHoldInProgress = false;
+        suppressNextCrouchTap = false;
+
+        if (animator != null)
+        {
+            animator.SetBool("IsCrouching", isCrouching);
+            animator.SetBool("IsProne", isProne);
+        }
+    }
+
+    private void ApplyExternalCrouchLockState()
+    {
+        if (!externalCrouchLock)
+            return;
+
+        isCrouching = externalCrouchLockValue;
+
+        if (externalCrouchLockValue)
+            isProne = false;
+
+        proneHoldInProgress = false;
+        suppressNextCrouchTap = false;
+
+        if (animator != null)
+        {
+            animator.SetBool("IsCrouching", isCrouching);
+            animator.SetBool("IsProne", isProne);
+        }
     }
 
     public void CancelAimAndRequireRepress()
@@ -244,6 +310,7 @@ public class PlayerMovement : MonoBehaviour
         if (animator != null)
             animator.SetBool("IsAiming", false);
     }
+    
 
     void Update()
     {
@@ -288,6 +355,12 @@ public class PlayerMovement : MonoBehaviour
             runHeld = false;
         }
 
+        if (externalCrouchLock)
+        {
+            ApplyExternalCrouchLockState();
+            runHeld = false;
+        }
+
         if (isReloadingNow)
         {
             runHeld = false;
@@ -304,12 +377,14 @@ public class PlayerMovement : MonoBehaviour
         hasMoveInput = wantsToMove;
 
         Vector3 moveDirWorld = viewFrame.MoveDirWorld;
+        cachedMoveDirWorld = moveDirWorld;
         Vector3 facingDir = viewFrame.FacingDir;
 
         bool rawAimHeld = viewFrame.RawAimHeld;
         bool aimPressedThisFrame = viewFrame.AimPressedThisFrame;
 
         bool divePressed = !externalMovementLock &&
+                           !externalCrouchLock &&
                            !recoveryLocked &&
                            diveAction != null &&
                            diveAction.WasPerformedThisFrame();
@@ -328,6 +403,7 @@ public class PlayerMovement : MonoBehaviour
         }
 
         bool runRequested = !externalMovementLock &&
+                            !externalCrouchLock &&
                             !recoveryLocked &&
                             runHeld &&
                             wantsToMove &&
@@ -335,11 +411,13 @@ public class PlayerMovement : MonoBehaviour
                             !proneHoldInProgress;
 
         bool runPressedThisFrame = !externalMovementLock &&
+                                   !externalCrouchLock &&
                                    !recoveryLocked &&
                                    runAction != null &&
                                    runAction.WasPressedThisFrame();
 
         bool canSlideNow = !externalMovementLock &&
+                           !externalCrouchLock &&
                            !recoveryLocked &&
                            isGrounded &&
                            !isDiving &&
@@ -375,7 +453,8 @@ public class PlayerMovement : MonoBehaviour
             }
         }
 
-        if (crouchAction != null &&
+        if (!externalCrouchLock &&
+            crouchAction != null &&
             crouchAction.WasPerformedThisFrame() &&
             isGrounded &&
             !isDiving &&
@@ -396,6 +475,9 @@ public class PlayerMovement : MonoBehaviour
                 isCrouching = !isCrouching;
             }
         }
+
+        if (externalCrouchLock)
+            ApplyExternalCrouchLockState();
 
         if (aimPressedThisFrame)
             preferAimWhenBothHeld = true;
@@ -456,9 +538,12 @@ public class PlayerMovement : MonoBehaviour
                 facingDir = moveDirWorld;
         }
 
+        if (externalCrouchLock)
+            ApplyExternalCrouchLockState();
+
         desiredFacingDir = facingDir;
 
-        if (!useRootMotionRotation && desiredFacingDir.sqrMagnitude > 0.0001f)
+        if (!externalMovementLock && !useRootMotionRotation && desiredFacingDir.sqrMagnitude > 0.0001f)
         {
             float activeRotationSpeed = rotationSpeed;
 
@@ -503,11 +588,14 @@ public class PlayerMovement : MonoBehaviour
                 targetSpeedZ = localMove.z;
             }
 
-            UpdateLocomotionParams(targetSpeed, targetSpeedX, targetSpeedZ, dt);
+            if (!externalAnimatorLocomotionLock)
+            {
+                UpdateLocomotionParams(targetSpeed, targetSpeedX, targetSpeedZ, dt);
 
-            animator.SetFloat("Speed", animSpeed);
-            animator.SetFloat("SpeedX", animSpeedX);
-            animator.SetFloat("SpeedZ", animSpeedZ);
+                animator.SetFloat("Speed", animSpeed);
+                animator.SetFloat("SpeedX", animSpeedX);
+                animator.SetFloat("SpeedZ", animSpeedZ);
+            }
 
             animator.SetBool("IsMoving", isMoving);
             animator.SetBool("IsCrouching", isCrouching);
@@ -562,25 +650,34 @@ public class PlayerMovement : MonoBehaviour
         if (animator == null || controller == null)
             return;
 
-        bool postDiveLocked = Time.time < postDiveLockUntilTime;
-        bool postSlideLocked = Time.time < postSlideLockUntilTime;
-        bool recoveryLocked = postDiveLocked || postSlideLocked;
-
         if (isDiving)
             return;
 
         if (isSliding)
             return;
 
+        if (externalMovementLock)
+            return;
+
+        bool postDiveLocked = Time.time < postDiveLockUntilTime;
+        bool postSlideLocked = Time.time < postSlideLockUntilTime;
+        bool recoveryLocked = postDiveLocked || postSlideLocked;
+
         Vector3 delta = Vector3.zero;
 
-        if (useRootMotionLocomotion && hasMoveInput && !externalMovementLock && !recoveryLocked)
+        if (useRootMotionLocomotion && hasMoveInput && !recoveryLocked)
         {
             float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
             if (animator.updateMode == AnimatorUpdateMode.UnscaledTime)
                 speedMult = 1f;
 
-            delta = animator.deltaPosition * rootMotionScale * speedMult;
+            float rootSpeed = animator.deltaPosition.magnitude;
+
+            if (rootSpeed > 0.00001f && cachedMoveDirWorld.sqrMagnitude > 0.0001f)
+                delta = cachedMoveDirWorld.normalized * rootSpeed * rootMotionScale * speedMult;
+            else
+                delta = animator.deltaPosition * rootMotionScale * speedMult;
+
             delta.y = 0f;
         }
 
@@ -598,6 +695,9 @@ public class PlayerMovement : MonoBehaviour
 
     void OnProneStarted(InputAction.CallbackContext ctx)
     {
+        if (externalCrouchLock)
+            return;
+
         if (!isGrounded || isDiving || isSliding)
             return;
 
@@ -618,6 +718,9 @@ public class PlayerMovement : MonoBehaviour
 
     void OnPronePerformed(InputAction.CallbackContext ctx)
     {
+        if (externalCrouchLock)
+            return;
+
         if (!isGrounded || isDiving || isSliding)
             return;
 
@@ -640,6 +743,9 @@ public class PlayerMovement : MonoBehaviour
 
     void OnProneCanceled(InputAction.CallbackContext ctx)
     {
+        if (externalCrouchLock)
+            return;
+
         proneHoldInProgress = false;
     }
 
@@ -653,6 +759,9 @@ public class PlayerMovement : MonoBehaviour
 
     bool CanStartSlideFromCurrentInput()
     {
+        if (externalCrouchLock)
+            return false;
+
         if (moveAction == null || runAction == null)
             return false;
 

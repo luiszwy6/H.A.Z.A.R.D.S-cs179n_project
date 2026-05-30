@@ -1,4 +1,5 @@
 using System.Collections;
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Animations.Rigging;
@@ -7,12 +8,15 @@ using UnityEngine.Animations.Rigging;
 [RequireComponent(typeof(PlayerInput))]
 public class PlayerMeleeAttack : MonoBehaviour
 {
+    public event Action MeleeAttackStarted;
+
     [Header("References")]
     [SerializeField] private Animator animator;
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private PlayerWeaponSlots playerWeaponSlots;
     [SerializeField] private ARShootSettings fallbackARShootSettings;
     [SerializeField] private SG_ShootSettings fallbackSGShootSettings;
+    [SerializeField] private PlayerStatus playerStatus;
 
     [Header("Input")]
     [SerializeField] private string meleeActionName = "Melee";
@@ -29,6 +33,10 @@ public class PlayerMeleeAttack : MonoBehaviour
     [Header("Cooldown")]
     [SerializeField] private bool useMeleeCooldown = true;
     [SerializeField] private float meleeCooldown = 0.6f;
+
+    [Header("Status Upload")]
+    [SerializeField] private bool uploadMeleeStatus = true;
+    [SerializeField] private float meleeAttackStatusDuration = 0.6f;
 
     [Header("Melee Effects")]
     [SerializeField] private MeleeWeaponEffects meleeWeaponEffects;
@@ -97,6 +105,12 @@ public class PlayerMeleeAttack : MonoBehaviour
     private EnemyBackTrigger currentEnemyBackTrigger;
     private bool currentAttackIsBackStab;
 
+    private Coroutine meleeStatusRoutine;
+    private bool currentStatusIsBackStab;
+
+    public bool IsMeleeAttacking { get; private set; }
+    public bool IsBackStabbingNow => IsMeleeAttacking && currentStatusIsBackStab;
+
     public bool IsMeleeOnCooldown =>
         useMeleeCooldown && Time.time < nextMeleeAllowedTime;
 
@@ -119,6 +133,7 @@ public class PlayerMeleeAttack : MonoBehaviour
         animator = GetComponentInChildren<Animator>();
         playerMovement = GetComponent<PlayerMovement>();
         playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+        playerStatus = GetComponent<PlayerStatus>();
 
         fallbackARShootSettings = GetComponentInChildren<ARShootSettings>(true);
         fallbackSGShootSettings = GetComponentInChildren<SG_ShootSettings>(true);
@@ -139,6 +154,12 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         if (playerWeaponSlots == null)
             playerWeaponSlots = GetComponent<PlayerWeaponSlots>();
+
+        if (playerStatus == null)
+            playerStatus = GetComponent<PlayerStatus>();
+
+        if (playerStatus == null)
+            playerStatus = PlayerStatus.Instance;
 
         if (meleeWeaponEffects == null)
             meleeWeaponEffects = GetComponentInChildren<MeleeWeaponEffects>(true);
@@ -161,6 +182,8 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         if (meleeWeaponObject != null)
             meleeWeaponObject.SetActive(false);
+
+        SetMeleeStatus(false, false);
     }
 
     private void OnEnable()
@@ -196,8 +219,12 @@ public class PlayerMeleeAttack : MonoBehaviour
         StopMeleeWeaponVisibilityRoutineOnly();
         RestoreWeaponVisibility();
 
+        StopMeleeStatusRoutineOnly();
+        SetMeleeStatus(false, false);
+
         currentEnemyBackTrigger = null;
         currentAttackIsBackStab = false;
+        currentStatusIsBackStab = false;
     }
 
     private void OnMeleePerformed(InputAction.CallbackContext context)
@@ -211,6 +238,7 @@ public class PlayerMeleeAttack : MonoBehaviour
             return false;
 
         PrepareCurrentMeleeMode();
+        StartMeleeStatus();
 
         if (playerMovement != null)
             playerMovement.CancelAimAndRequireRepress();
@@ -236,6 +264,8 @@ public class PlayerMeleeAttack : MonoBehaviour
 
         if (currentAttackIsBackStab && clearBackTriggerAfterBackStab)
             currentEnemyBackTrigger = null;
+
+        MeleeAttackStarted?.Invoke();
 
         return true;
     }
@@ -611,6 +641,56 @@ public class PlayerMeleeAttack : MonoBehaviour
             StopCoroutine(meleeWeaponVisibilityRoutine);
             meleeWeaponVisibilityRoutine = null;
         }
+    }
+
+    private void StartMeleeStatus()
+    {
+        if (!uploadMeleeStatus)
+            return;
+
+        StopMeleeStatusRoutineOnly();
+
+        IsMeleeAttacking = true;
+        currentStatusIsBackStab = currentAttackIsBackStab;
+
+        SetMeleeStatus(true, currentStatusIsBackStab);
+
+        meleeStatusRoutine = StartCoroutine(MeleeStatusRoutine());
+    }
+
+    private IEnumerator MeleeStatusRoutine()
+    {
+        float duration = Mathf.Max(0.01f, meleeAttackStatusDuration);
+
+        yield return new WaitForSeconds(duration);
+
+        IsMeleeAttacking = false;
+        currentStatusIsBackStab = false;
+
+        SetMeleeStatus(false, false);
+
+        meleeStatusRoutine = null;
+    }
+
+    private void StopMeleeStatusRoutineOnly()
+    {
+        if (meleeStatusRoutine != null)
+        {
+            StopCoroutine(meleeStatusRoutine);
+            meleeStatusRoutine = null;
+        }
+    }
+
+    private void SetMeleeStatus(bool meleeAttacking, bool backStabbing)
+    {
+        if (playerStatus != null)
+        {
+            playerStatus.SetMeleeStatus(meleeAttacking, backStabbing);
+            return;
+        }
+
+        if (PlayerStatus.Instance != null)
+            PlayerStatus.Instance.SetMeleeStatus(meleeAttacking, backStabbing);
     }
 
     private bool GetAnimatorBoolIfExists(string parameterName, int parameterHash)

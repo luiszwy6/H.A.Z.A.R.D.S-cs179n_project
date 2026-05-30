@@ -125,12 +125,17 @@ public class EnemyHealth : MonoBehaviour
     [SerializeField] private bool applyMusclesPowerToChildRagdollAnimators = true;
     [SerializeField] private bool enforceDeathRagdollMusclesPowerAfterDeath = true;
 
+    [Header("Force Disable Child Behaviours")]
+    [Tooltip("Disables all non-Animator Behaviours on child objects unconditionally, regardless of shutdown mode settings.")]
+    [SerializeField] private bool forceDisableChildBehavioursOnDeath = true;
+
     [Header("Custom Shutdown Types")]
     [SerializeField] private bool disableAnimatorOnDeath = false;
     [SerializeField] private bool disableNavMeshAgentOnDeath = true;
     [SerializeField] private bool disableRagdollAnimatorOnDeath = false;
     [SerializeField] private bool disableBehaviorGraphAgentOnDeath = true;
     [SerializeField] private bool disableEnemySensorOnDeath = true;
+    [SerializeField] private bool disableWeaponShootersOnDeath = true;
     [SerializeField] private bool disableOtherBehavioursOnDeath = true;
 
     [Header("NavMeshAgent Shutdown")]
@@ -173,6 +178,12 @@ public class EnemyHealth : MonoBehaviour
     public UnityEvent onDamaged;
     public UnityEvent onDeath;
 
+    [Header("Damage Reveal")]
+    [SerializeField] private EnemySensor enemySensor;
+    [SerializeField] private bool revealPlayerOnDamageWhilePlayerShooting = true;
+    [SerializeField] private bool revealPlayerOnAnyDamage = false;
+    [Min(0f)] [SerializeField] private float damageRevealDuration = 2f;
+
     [Header("Debug")]
     [SerializeField] private bool logDamage = false;
     [SerializeField] private bool logDeath = false;
@@ -207,6 +218,8 @@ public class EnemyHealth : MonoBehaviour
         "muscleWeight"
     };
 
+    public static event System.Action OnAnyEnemyDied;
+
     public float BaseHealth => base_Health;
     public float CurrentHealth => currentHealth;
     public int CurrentArmorLevel => Mathf.Clamp(ArmorLevel, 0, 2);
@@ -231,6 +244,9 @@ public class EnemyHealth : MonoBehaviour
 
         if (deathRagdollComponent == null)
             deathRagdollComponent = GetComponent<RagdollAnimator2>();
+
+        if (enemySensor == null)
+            enemySensor = GetComponent<EnemySensor>();
 
         if (deathRagdollComponent != null)
         {
@@ -421,10 +437,37 @@ public class EnemyHealth : MonoBehaviour
 
         currentHealth = Mathf.Max(0f, currentHealth - damage);
 
+        TryRevealPlayerFromDamage();
+
         onDamaged?.Invoke();
 
         if (currentHealth <= 0f)
             Die();
+    }
+
+    private void TryRevealPlayerFromDamage()
+    {
+        if (enemySensor == null)
+            enemySensor = GetComponent<EnemySensor>();
+
+        if (enemySensor == null)
+            return;
+
+        if (revealPlayerOnAnyDamage)
+        {
+            enemySensor.RevealTargetFromDamage(damageRevealDuration);
+            return;
+        }
+
+        if (!revealPlayerOnDamageWhilePlayerShooting)
+            return;
+
+        PlayerStatus playerStatus = PlayerStatus.Instance;
+
+        if (playerStatus == null || !playerStatus.IsAnyShooting)
+            return;
+
+        enemySensor.RevealTargetFromDamage(damageRevealDuration);
     }
 
     public void Heal(float amount)
@@ -520,6 +563,10 @@ public class EnemyHealth : MonoBehaviour
         isDead = true;
         currentHealth = 0f;
 
+        SquadMember squadMember = GetComponent<SquadMember>();
+        if (squadMember != null)
+            squadMember.MarkDead();
+
         if (setAnimatorIsDeadOnDeath)
             SetAnimatorIsDead(true);
 
@@ -527,6 +574,10 @@ public class EnemyHealth : MonoBehaviour
             SetHitboxesEnabled(false);
 
         onDeath?.Invoke();
+        OnAnyEnemyDied?.Invoke();
+
+        if (forceDisableChildBehavioursOnDeath)
+            ForceDisableChildBehaviours();
 
         if (activateDeathRagdollOnDeath)
             ActivateDeathRagdoll();
@@ -762,7 +813,40 @@ public class EnemyHealth : MonoBehaviour
         if (behaviour is EnemySensor)
             return disableEnemySensorOnDeath;
 
+        if (behaviour is EnemyWeaponShooter || behaviour is EnemyMeleeAttacker)
+            return disableWeaponShootersOnDeath;
+
         return disableOtherBehavioursOnDeath;
+    }
+
+    private void ForceDisableChildBehaviours()
+    {
+        Behaviour[] childBehaviours = GetComponentsInChildren<Behaviour>(true);
+
+        for (int i = 0; i < childBehaviours.Length; i++)
+        {
+            Behaviour behaviour = childBehaviours[i];
+
+            if (behaviour == null)
+                continue;
+
+            if (behaviour.transform == transform)
+                continue;
+
+            if (behaviour is Animator)
+                continue;
+
+            if (behaviour is RagdollAnimator2)
+                continue;
+
+            if (behaviour is EnemyWeaponShooter weaponShooter)
+                weaponShooter.ForceClearRuntimeState();
+
+            if (behaviour is EnemyMeleeAttacker meleeAttacker)
+                meleeAttacker.ForceClearRuntimeState();
+
+            behaviour.enabled = false;
+        }
     }
 
     private void DisableBehaviourOnDeath(Behaviour behaviour, bool forced)
@@ -775,6 +859,12 @@ public class EnemyHealth : MonoBehaviour
 
         if (IsBehaviorGraphAgent(behaviour))
             TryEndBehaviorGraphAgent(behaviour);
+
+        if (behaviour is EnemyWeaponShooter weaponShooter)
+            weaponShooter.ForceClearRuntimeState();
+
+        if (behaviour is EnemyMeleeAttacker meleeAttacker)
+            meleeAttacker.ForceClearRuntimeState();
 
         behaviour.enabled = false;
 

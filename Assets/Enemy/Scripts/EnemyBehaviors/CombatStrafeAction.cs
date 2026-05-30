@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unity.Behavior;
 using Unity.Properties;
 using UnityEngine;
@@ -20,6 +21,9 @@ public enum EnemyStrafeMovePattern
 )]
 public partial class CombatStrafeAction : Action
 {
+    private static readonly Dictionary<int, Vector3> activeStrafeDestinations =
+        new Dictionary<int, Vector3>();
+
     [SerializeReference] public BlackboardVariable<GameObject> Self;
 
     [SerializeReference] public BlackboardVariable<EnemyMoveMode> MoveMode;
@@ -39,9 +43,18 @@ public partial class CombatStrafeAction : Action
     [SerializeReference] public BlackboardVariable<bool> ResetCenterAfterReach;
     [SerializeReference] public BlackboardVariable<bool> ForceZeroVelocityAtPoint;
     [SerializeReference] public BlackboardVariable<bool> ReturnRunningWhileActive;
+    [SerializeReference] public BlackboardVariable<bool> AvoidTeammateStrafePoints;
+    [SerializeReference] public BlackboardVariable<float> TeammateAvoidDistance;
+    [SerializeReference] public BlackboardVariable<int> MaxPickAttempts;
+    [SerializeReference] public BlackboardVariable<bool> StopWhileStunned;
+    [SerializeReference] public BlackboardVariable<bool> StopWhileFlashBangStunned;
 
     private NavMeshAgent agent;
     private EnemyAnimatorParameterDriver animatorDriver;
+    private EnemyStatus enemyStatus;
+    private EnemyStunReceiver stunReceiver;
+    private SquadMember squadMember;
+    private NavMeshPath path;
 
     private GameObject cachedSelf;
 
@@ -61,18 +74,26 @@ public partial class CombatStrafeAction : Action
 
         if (cachedSelf != Self.Value)
         {
+            ClearRegisteredDestination();
             cachedSelf = Self.Value;
             ResetRuntimeState();
         }
 
         agent = Self.Value.GetComponent<NavMeshAgent>();
         animatorDriver = Self.Value.GetComponent<EnemyAnimatorParameterDriver>();
+        enemyStatus = Self.Value.GetComponent<EnemyStatus>();
+        stunReceiver = Self.Value.GetComponent<EnemyStunReceiver>();
+        squadMember = Self.Value.GetComponent<SquadMember>();
+        path = new NavMeshPath();
 
         if (agent == null)
             return Status.Failure;
 
         if (!agent.isOnNavMesh)
             return Status.Failure;
+
+        if (ShouldStopForStun())
+            return StopStrafeForStun();
 
         if (!hasCenter)
         {
@@ -100,6 +121,9 @@ public partial class CombatStrafeAction : Action
         if (!agent.isOnNavMesh)
             return Status.Failure;
 
+        if (ShouldStopForStun())
+            return StopStrafeForStun();
+
         if (animatorDriver != null)
             animatorDriver.SetMoveMode(ResolveMoveMode());
 
@@ -111,6 +135,7 @@ public partial class CombatStrafeAction : Action
 
     protected override void OnEnd()
     {
+        ClearRegisteredDestination();
     }
 
     private Status TickStrafe()
@@ -162,18 +187,35 @@ public partial class CombatStrafeAction : Action
         if (agent == null)
             return false;
 
-        Vector3 candidate;
-
-        if (ResolveStrafePattern() == EnemyStrafeMovePattern.LeftRightFromFacing)
-            candidate = GetLeftRightCandidate();
-        else
-            candidate = GetRandomPointAroundCenterCandidate();
-
+        int attempts = ResolveMaxPickAttempts();
         float sampleDistance = ResolveNavMeshSampleDistance();
 
-        if (NavMesh.SamplePosition(candidate, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
+        for (int i = 0; i < attempts; i++)
         {
+            Vector3 candidate;
+
+            if (ResolveStrafePattern() == EnemyStrafeMovePattern.LeftRightFromFacing)
+                candidate = GetLeftRightCandidate(i);
+            else
+                candidate = GetRandomPointAroundCenterCandidate();
+
+            if (!NavMesh.SamplePosition(
+                    candidate,
+                    out NavMeshHit hit,
+                    sampleDistance,
+                    agent.areaMask))
+            {
+                continue;
+            }
+
+            if (!IsReachable(hit.position))
+                continue;
+
+            if (IsTooCloseToTeammateStrafePoint(hit.position))
+                continue;
+
             currentDestination = hit.position;
+            RegisterDestination(currentDestination);
 
             agent.isStopped = false;
 
@@ -187,10 +229,11 @@ public partial class CombatStrafeAction : Action
         }
 
         hasDestination = false;
+        ClearRegisteredDestination();
         return false;
     }
 
-    private Vector3 GetLeftRightCandidate()
+    private Vector3 GetLeftRightCandidate(int attempt)
     {
         Transform selfTransform = Self.Value.transform;
 
@@ -201,7 +244,12 @@ public partial class CombatStrafeAction : Action
             max = min;
 
         float distance = UnityEngine.Random.Range(min, max);
-        float side = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+        float side;
+
+        if (attempt == 0)
+            side = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+        else
+            side = attempt % 2 == 0 ? 1f : -1f;
 
         Vector3 right = selfTransform.right;
         right.y = 0f;
@@ -209,7 +257,19 @@ public partial class CombatStrafeAction : Action
         if (right.sqrMagnitude < 0.01f)
             right = Vector3.right;
 
-        return selfTransform.position + right.normalized * side * distance;
+        Vector3 forward = selfTransform.forward;
+        forward.y = 0f;
+
+        if (forward.sqrMagnitude < 0.01f)
+            forward = Vector3.forward;
+
+        float forwardOffset = attempt <= 1
+            ? 0f
+            : UnityEngine.Random.Range(-0.5f, 0.5f) * distance;
+
+        return selfTransform.position +
+               right.normalized * side * distance +
+               forward.normalized * forwardOffset;
     }
 
     private Vector3 GetRandomPointAroundCenterCandidate()
@@ -331,5 +391,157 @@ public partial class CombatStrafeAction : Action
             return false;
 
         return ReturnRunningWhileActive.Value;
+    }
+
+    private bool ResolveAvoidTeammateStrafePoints()
+    {
+        if (AvoidTeammateStrafePoints == null)
+            return true;
+
+        return AvoidTeammateStrafePoints.Value;
+    }
+
+    private float ResolveTeammateAvoidDistance()
+    {
+        if (TeammateAvoidDistance == null)
+            return 1.5f;
+
+        return Mathf.Max(0f, TeammateAvoidDistance.Value);
+    }
+
+    private int ResolveMaxPickAttempts()
+    {
+        if (MaxPickAttempts == null)
+            return 8;
+
+        return Mathf.Max(1, MaxPickAttempts.Value);
+    }
+
+    private bool IsReachable(Vector3 destination)
+    {
+        if (agent == null || !agent.isOnNavMesh)
+            return false;
+
+        if (path == null)
+            path = new NavMeshPath();
+
+        if (!agent.CalculatePath(destination, path))
+            return false;
+
+        return path.status == NavMeshPathStatus.PathComplete;
+    }
+
+    private bool IsTooCloseToTeammateStrafePoint(Vector3 destination)
+    {
+        if (!ResolveAvoidTeammateStrafePoints())
+            return false;
+
+        float avoidDistance = ResolveTeammateAvoidDistance();
+
+        if (avoidDistance <= 0f)
+            return false;
+
+        if (squadMember == null)
+            squadMember = Self.Value.GetComponent<SquadMember>();
+
+        if (squadMember == null || squadMember.SquadManager == null)
+            return false;
+
+        float avoidDistanceSqr = avoidDistance * avoidDistance;
+        var members = squadMember.SquadManager.Members;
+
+        for (int i = 0; i < members.Count; i++)
+        {
+            SquadMember member = members[i];
+
+            if (member == null || member == squadMember || !member.IsAlive)
+                continue;
+
+            int teammateKey = member.gameObject.GetInstanceID();
+
+            if (activeStrafeDestinations.TryGetValue(teammateKey, out Vector3 teammateDestination))
+            {
+                if ((destination - teammateDestination).sqrMagnitude < avoidDistanceSqr)
+                    return true;
+            }
+
+            if ((destination - member.transform.position).sqrMagnitude < avoidDistanceSqr)
+                return true;
+        }
+
+        return false;
+    }
+
+    private void RegisterDestination(Vector3 destination)
+    {
+        if (Self == null || Self.Value == null)
+            return;
+
+        activeStrafeDestinations[Self.Value.GetInstanceID()] = destination;
+    }
+
+    private Status StopStrafeForStun()
+    {
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+            agent.velocity = Vector3.zero;
+        }
+
+        ClearRegisteredDestination();
+        ResetRuntimeState();
+        return Status.Failure;
+    }
+
+    private bool ShouldStopForStun()
+    {
+        if (Self == null || Self.Value == null)
+            return false;
+
+        if (ResolveStopWhileStunned())
+        {
+            if (stunReceiver == null)
+                stunReceiver = Self.Value.GetComponent<EnemyStunReceiver>();
+
+            if (stunReceiver != null && stunReceiver.IsStunned)
+                return true;
+        }
+
+        if (ResolveStopWhileFlashBangStunned())
+        {
+            if (enemyStatus == null)
+                enemyStatus = Self.Value.GetComponent<EnemyStatus>();
+
+            if (enemyStatus != null && enemyStatus.IsFlashBangStun)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool ResolveStopWhileStunned()
+    {
+        if (StopWhileStunned == null)
+            return true;
+
+        return StopWhileStunned.Value;
+    }
+
+    private bool ResolveStopWhileFlashBangStunned()
+    {
+        if (StopWhileFlashBangStunned == null)
+            return true;
+
+        return StopWhileFlashBangStunned.Value;
+    }
+
+    private void ClearRegisteredDestination()
+    {
+        if (cachedSelf != null)
+            activeStrafeDestinations.Remove(cachedSelf.GetInstanceID());
+
+        if (Self != null && Self.Value != null)
+            activeStrafeDestinations.Remove(Self.Value.GetInstanceID());
     }
 }

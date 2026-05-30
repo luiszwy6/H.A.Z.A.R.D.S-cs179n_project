@@ -8,7 +8,8 @@ public class EnemyWeaponShooter : MonoBehaviour
     public enum EnemyShootingType
     {
         AR,
-        ShotGun
+        ShotGun,
+        Sniper
     }
 
     [Header("Shooting Type")]
@@ -19,12 +20,16 @@ public class EnemyWeaponShooter : MonoBehaviour
     [SerializeField] private Animator enemyAnimator;
     [SerializeField] private EnemyAnimatorParameterDriver enemyAnimatorDriver;
     [SerializeField] private EnemyWeaponSettings enemyWeaponSettings;
+    [SerializeField] private EnemyStatus enemyStatus;
 
     [Header("Damage Setting - AR")]
     [SerializeField] private AR_DamageSetting damageSetting;
 
     [Header("Damage Setting - ShotGun")]
     [SerializeField] private SG_DamageSetting sgDamageSetting;
+
+    [Header("Damage Setting - Sniper")]
+    [SerializeField] private SR_DamageSetting srDamageSetting;
 
     [Header("Weapon SFX/VFX")]
     [SerializeField] private WeaponEffects weaponEffects;
@@ -44,7 +49,7 @@ public class EnemyWeaponShooter : MonoBehaviour
     [Min(0.01f)] [SerializeField] private float visualBulletSpeed = 150f;
 
     [Header("ShotGun Visual")]
-    [SerializeField] private bool spawnVisualProjectileForEachPellet = false;
+    [SerializeField] private bool spawnVisualProjectileForEachPellet = true;
 
     [Header("Fire Rate")]
     [Min(0f)] [SerializeField] private float shootCooldown = 0.12f;
@@ -56,6 +61,9 @@ public class EnemyWeaponShooter : MonoBehaviour
     [Header("Spread - ShotGun")]
     [Min(1)] [SerializeField] private int pelletCount = 6;
     [SerializeField] private List<float> shotGunSpreadAngleList = new List<float> { 5f, 6f, 7f };
+
+    [Header("Spread - Sniper")]
+    [SerializeField] private List<float> sniperSpreadAngleList = new List<float> { 0f };
 
     [Header("ShotGun Optional Impact")]
     [SerializeField] private bool spawnShotGunBulletImpact = false;
@@ -75,6 +83,7 @@ public class EnemyWeaponShooter : MonoBehaviour
     [Header("Animator - Shooting Type")]
     [SerializeField] private bool useKeepShootingBoolForAR = true;
     [SerializeField] private bool useKeepShootingBoolForShotGun = false;
+    [SerializeField] private bool useKeepShootingBoolForSniper = false;
 
     [Header("External Locks")]
     public bool externalShootLock;
@@ -123,6 +132,9 @@ public class EnemyWeaponShooter : MonoBehaviour
         if (enemyWeaponSettings == null)
             enemyWeaponSettings = GetComponentInChildren<EnemyWeaponSettings>(true);
 
+        if (enemyStatus == null)
+            enemyStatus = root.GetComponent<EnemyStatus>();
+
         if (damageSetting == null)
             damageSetting = GetComponent<AR_DamageSetting>();
 
@@ -134,6 +146,12 @@ public class EnemyWeaponShooter : MonoBehaviour
 
         if (sgDamageSetting == null)
             sgDamageSetting = GetComponentInChildren<SG_DamageSetting>(true);
+
+        if (srDamageSetting == null)
+            srDamageSetting = GetComponent<SR_DamageSetting>();
+
+        if (srDamageSetting == null)
+            srDamageSetting = GetComponentInChildren<SR_DamageSetting>(true);
 
         if (weaponEffects == null)
             weaponEffects = GetComponentInChildren<WeaponEffects>(true);
@@ -207,6 +225,10 @@ public class EnemyWeaponShooter : MonoBehaviour
                 ShootShotGun(origin, baseDir);
                 break;
 
+            case EnemyShootingType.Sniper:
+                ShootSniper(origin, baseDir);
+                break;
+
             case EnemyShootingType.AR:
             default:
                 ShootAR(origin, baseDir);
@@ -260,14 +282,13 @@ public class EnemyWeaponShooter : MonoBehaviour
     private void ShootShotGun(Vector3 origin, Vector3 baseDir)
     {
         int count = Mathf.Max(1, pelletCount);
-        Vector3 firstPelletDir = baseDir;
+        Ray firstPelletRay = new Ray(origin, baseDir);
 
         for (int i = 0; i < count; i++)
         {
-            Vector3 pelletDir = ApplySpread(baseDir, GetRandomSpreadAngle(shotGunSpreadAngleList));
-
-            if (i == 0)
-                firstPelletDir = pelletDir;
+            float spreadAngle = GetRandomSpreadAngle(shotGunSpreadAngleList);
+            Vector3 pelletDir = ApplySpread(baseDir, spreadAngle);
+            Ray pelletRay = new Ray(origin, pelletDir);
 
             BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
 
@@ -286,15 +307,42 @@ public class EnemyWeaponShooter : MonoBehaviour
             else if (damageSetting != null)
                 damageSetting.ApplyToProjectile(bullet);
 
+            if (i == 0)
+                firstPelletRay = pelletRay;
+
             if (spawnVisualProjectileForEachPellet)
-                SpawnVisualProjectile(origin, pelletDir);
+                SpawnVisualProjectile(pelletRay);
         }
 
         if (!spawnVisualProjectileForEachPellet)
-            SpawnVisualProjectile(origin, firstPelletDir);
+            SpawnVisualProjectile(firstPelletRay);
 
         if (spawnShotGunBulletImpact)
             SpawnShotGunBulletImpact(origin, baseDir);
+    }
+
+    private void ShootSniper(Vector3 origin, Vector3 baseDir)
+    {
+        Vector3 dir = ApplySpread(baseDir, GetRandomSpreadAngle(sniperSpreadAngleList));
+
+        BulletProjectile bullet = Instantiate(bulletProjectilePrefab, origin, Quaternion.identity);
+
+        bullet.Init(
+            origin,
+            dir,
+            bulletSpeed,
+            bulletMaxDistance,
+            bulletRadius,
+            bulletHitMask,
+            projectileTriggerInteraction
+        );
+
+        if (srDamageSetting != null)
+            srDamageSetting.ApplyToProjectile(bullet);
+        else if (damageSetting != null)
+            damageSetting.ApplyToProjectile(bullet);
+
+        SpawnVisualProjectile(origin, dir);
     }
 
     private void SpawnShotGunBulletImpact(Vector3 shotOrigin, Vector3 shotBaseDir)
@@ -306,10 +354,14 @@ public class EnemyWeaponShooter : MonoBehaviour
             ? bulletImpactSpawnPoint.position
             : shotOrigin;
 
-        Vector3 dir = shotBaseDir;
+        Vector3 targetPoint = shotOrigin + shotBaseDir.normalized * Mathf.Max(0.01f, bulletImpactMaxDistance);
+        Vector3 dir = targetPoint - spawnOrigin;
 
         if (dir.sqrMagnitude <= 0.0001f)
-            dir = muzzlePoint != null ? muzzlePoint.forward : transform.forward;
+            dir = shotBaseDir;
+
+        if (dir.sqrMagnitude <= 0.0001f)
+            dir = transform.forward;
 
         dir.Normalize();
 
@@ -332,6 +384,8 @@ public class EnemyWeaponShooter : MonoBehaviour
     private void PlayShootAnimator()
     {
         bool useKeepShooting = ShouldUseKeepShootingBool();
+
+        KeepShootingStatusActive();
 
         if (enemyAnimatorDriver != null)
         {
@@ -361,6 +415,9 @@ public class EnemyWeaponShooter : MonoBehaviour
     {
         switch (shootingType)
         {
+            case EnemyShootingType.Sniper:
+                return useKeepShootingBoolForSniper;
+
             case EnemyShootingType.ShotGun:
                 return useKeepShootingBoolForShotGun;
 
@@ -397,6 +454,18 @@ public class EnemyWeaponShooter : MonoBehaviour
             if (!string.IsNullOrWhiteSpace(keepShootingBoolName))
                 enemyAnimator.SetBool(keepShootingBoolHash, false);
         }
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(false);
+    }
+
+    private void KeepShootingStatusActive()
+    {
+        if (enemyStatus == null)
+            enemyStatus = transform.root.GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(true);
     }
 
     private float GetRandomSpreadAngle(List<float> list)
@@ -429,18 +498,22 @@ public class EnemyWeaponShooter : MonoBehaviour
 
     private void SpawnVisualProjectile(Vector3 origin, Vector3 dir)
     {
+        SpawnVisualProjectile(new Ray(origin, dir));
+    }
+
+    private void SpawnVisualProjectile(Ray shotRay)
+    {
         if (!spawnVisualProjectile || visualBulletProjectilePrefab == null)
             return;
 
         Vector3 visualOrigin = visualProjectileSpawnPoint != null
             ? visualProjectileSpawnPoint.position
-            : origin;
+            : shotRay.origin;
 
         Vector3 targetPoint;
 
         if (Physics.Raycast(
-            origin,
-            dir,
+            shotRay,
             out RaycastHit hit,
             bulletMaxDistance,
             bulletHitMask,
@@ -450,7 +523,7 @@ public class EnemyWeaponShooter : MonoBehaviour
         }
         else
         {
-            targetPoint = origin + dir * bulletMaxDistance;
+            targetPoint = shotRay.origin + shotRay.direction * bulletMaxDistance;
         }
 
         BulletProjectileVisual visualBullet =

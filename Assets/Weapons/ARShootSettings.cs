@@ -81,6 +81,7 @@ public class ARShootSettings : MonoBehaviour
 
     [Header("External Locks")]
     public bool externalShootLock = false;
+    [SerializeField] private PlayerStatus playerStatus;
 
     private InputAction shootAction;
     private float nextShootTime;
@@ -165,6 +166,9 @@ public class ARShootSettings : MonoBehaviour
 
         if (playerInput != null && playerInput.actions != null)
             shootAction = playerInput.actions[shootActionName];
+
+        if (playerStatus == null)
+            playerStatus = transform.root.GetComponent<PlayerStatus>();
 
         shootTriggerHash = Animator.StringToHash(shootTriggerName);
         quickShotBoolHash = Animator.StringToHash(quickShotBoolName);
@@ -773,5 +777,13 @@ public class ARShootSettings : MonoBehaviour
             return false;
 
         return damageSetting != null && damageSetting.PenetrationCount > 0;
+    }
+
+    private void UploadRifleShootingStatus(bool value)
+    {
+        if (playerStatus != null)
+            playerStatus.SetRifleShooting(value);
+        else if (PlayerStatus.Instance != null)
+            PlayerStatus.Instance.SetRifleShooting(value);
     }
 }
