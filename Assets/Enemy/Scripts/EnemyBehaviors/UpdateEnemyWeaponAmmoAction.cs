@@ -28,6 +28,7 @@ public partial class UpdateEnemyWeaponAmmoAction : Action
     [SerializeReference] public BlackboardVariable<bool> HasReserveAmmo;
 
     private EnemyWeaponSettings enemyWeaponSettings;
+    private EnemyStatus enemyStatus;
 
     protected override Status OnStart()
     {
@@ -38,6 +39,8 @@ public partial class UpdateEnemyWeaponAmmoAction : Action
 
         if (enemyWeaponSettings == null)
             return Status.Failure;
+
+        enemyStatus = Self.Value.GetComponent<EnemyStatus>();
 
         return Status.Running;
     }
@@ -69,6 +72,9 @@ public partial class UpdateEnemyWeaponAmmoAction : Action
 
         if (IsReloading != null)
             IsReloading.Value = enemyWeaponSettings.IsReloading;
+
+        if (enemyStatus != null)
+            enemyStatus.SetReloading(enemyWeaponSettings.IsReloading);
 
         if (CanShoot != null)
             CanShoot.Value = enemyWeaponSettings.CanShoot();

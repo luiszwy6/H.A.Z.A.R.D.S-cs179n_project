@@ -7,6 +7,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
     [Header("References")]
     [SerializeField] private NavMeshAgent agent;
     [SerializeField] private Animator animator;
+    [SerializeField] private EnemyStatus enemyStatus;
 
     [Header("Move Speeds")]
     [SerializeField] private float walkSpeed = 2.0f;
@@ -48,6 +49,9 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
     [SerializeField] private bool isShooting;
     [SerializeField] private bool keepShooting;
 
+    [Header("External Animation Overrides")]
+    [SerializeField] private bool externalCrouchOverride;
+
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int SpeedXHash = Animator.StringToHash("SpeedX");
     private static readonly int SpeedZHash = Animator.StringToHash("SpeedZ");
@@ -79,6 +83,9 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
 
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
+
+        if (enemyStatus == null)
+            enemyStatus = GetComponent<EnemyStatus>();
 
         ApplyMoveModeToAgent(currentMoveMode);
         ForceClearPlayerOnlyParams();
@@ -220,12 +227,6 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         float speedX = localVelocity.x;
         float speedZ = localVelocity.z;
 
-        if (directionalBlendOnlyWhileAiming && !isAiming)
-        {
-            speedX = 0f;
-            speedZ = 0f;
-        }
-
         if (normalizeSpeed)
         {
             float max = Mathf.Max(0.01f, maxMoveSpeed);
@@ -234,7 +235,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
             speedZ = Mathf.Clamp(speedZ / max, -1f, 1f);
         }
 
-        bool isCrouching = currentMoveMode == EnemyMoveMode.Crouch;
+        bool isCrouching = externalCrouchOverride || currentMoveMode == EnemyMoveMode.Crouch;
         bool isRunning = isMoving && currentMoveMode == EnemyMoveMode.Run;
         bool isWalking = isMoving && currentMoveMode != EnemyMoveMode.Run;
         bool isIdle = !isMoving && !isAiming && !isShooting;
@@ -282,11 +283,17 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
     public void SetShooting(bool shooting)
     {
         isShooting = shooting;
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(shooting || keepShooting);
     }
 
     public void SetKeepShooting(bool shooting)
     {
         keepShooting = shooting;
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(isShooting || shooting);
     }
 
     public void TriggerShoot()
@@ -303,5 +310,13 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         isAiming = false;
         isShooting = false;
         keepShooting = false;
+
+        if (enemyStatus != null)
+            enemyStatus.SetShooting(false);
+    }
+
+    public void SetExternalCrouchOverride(bool crouching)
+    {
+        externalCrouchOverride = crouching;
     }
 }

@@ -16,8 +16,6 @@ public class SquadAlertState : SquadState
         timer = 0f;
 
         squadManager.SetTacticalOverrideActive(false);
-        squadManager.SetCancelLeadBy(false);
-        squadManager.SetCancelFormation(false);
     }
 
     public override void Tick()

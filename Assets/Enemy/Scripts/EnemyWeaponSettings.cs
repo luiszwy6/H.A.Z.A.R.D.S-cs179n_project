@@ -15,8 +15,11 @@ public class EnemyWeaponSettings : MonoBehaviour
     [SerializeField] private TotalAmmoSetter enemyTotalAmmoSetter;
     [SerializeField] private Animator enemyAnimator;
     [SerializeField] private Rig reloadDisableRig;
+    [SerializeField] private EnemyStatus enemyStatus;
+    [SerializeField] private EnemyWeaponAnimatorState weaponAnimatorState;
 
     [Header("Ammo Settings")]
+    [SerializeField] private bool usesAmmoAndReload = true;
     [SerializeField] private TotalAmmoSetter.AmmoType ammoType = TotalAmmoSetter.AmmoType.AssaultRifle;
     [Min(1)] [SerializeField] private int magazineSize = 30;
     [Min(0)] [SerializeField] private int currentAmmoInMagazine = 30;
@@ -37,6 +40,7 @@ public class EnemyWeaponSettings : MonoBehaviour
     [SerializeField] private string isReloadingBoolName = "IsReloading";
     [SerializeField] private string keepReloadingBoolName = "KeepReloading";
     [SerializeField] private bool resetTriggerBeforeSet = true;
+    [SerializeField] private bool applyWeaponAnimatorStateBeforeReload = true;
 
     [Header("Force Reload State")]
     [SerializeField] private bool forceReloadStateByName = false;
@@ -68,6 +72,11 @@ public class EnemyWeaponSettings : MonoBehaviour
         get { return reloadMode; }
     }
 
+    public bool UsesAmmoAndReload
+    {
+        get { return usesAmmoAndReload; }
+    }
+
     public int MagazineSize
     {
         get { return magazineSize; }
@@ -75,13 +84,16 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public int CurrentAmmoInMagazine
     {
-        get { return currentAmmoInMagazine; }
+        get { return usesAmmoAndReload ? currentAmmoInMagazine : magazineSize; }
     }
 
     public int CurrentReserveAmmo
     {
         get
         {
+            if (!usesAmmoAndReload)
+                return 0;
+
             if (enemyTotalAmmoSetter == null)
                 return 0;
 
@@ -91,24 +103,24 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public bool IsReloading
     {
-        get { return isReloading; }
+        get { return usesAmmoAndReload && isReloading; }
     }
 
     public bool IsMagazineFull
     {
-        get { return currentAmmoInMagazine >= magazineSize; }
+        get { return !usesAmmoAndReload || currentAmmoInMagazine >= magazineSize; }
     }
 
     public bool IsMagazineEmpty
     {
-        get { return currentAmmoInMagazine <= 0; }
+        get { return usesAmmoAndReload && currentAmmoInMagazine <= 0; }
     }
 
     public bool HasReserveAmmo
     {
         get
         {
-            return enemyTotalAmmoSetter != null && enemyTotalAmmoSetter.HasAmmo(ammoType);
+            return usesAmmoAndReload && enemyTotalAmmoSetter != null && enemyTotalAmmoSetter.HasAmmo(ammoType);
         }
     }
 
@@ -157,6 +169,18 @@ public class EnemyWeaponSettings : MonoBehaviour
         if (enemyAnimator == null)
             enemyAnimator = root.GetComponentInChildren<Animator>();
 
+        if (enemyStatus == null)
+            enemyStatus = root.GetComponent<EnemyStatus>();
+
+        if (weaponAnimatorState == null)
+            weaponAnimatorState = GetComponent<EnemyWeaponAnimatorState>();
+
+        if (weaponAnimatorState == null)
+            weaponAnimatorState = GetComponentInChildren<EnemyWeaponAnimatorState>(true);
+
+        if (weaponAnimatorState == null)
+            weaponAnimatorState = root.GetComponentInChildren<EnemyWeaponAnimatorState>(true);
+
         ResolveEnemyTotalAmmoSetter();
     }
 
@@ -175,11 +199,17 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public bool CanShoot()
     {
+        if (!usesAmmoAndReload)
+            return true;
+
         return !isReloading && currentAmmoInMagazine > 0;
     }
 
     public bool TryCancelReloadForShoot()
     {
+        if (!usesAmmoAndReload)
+            return true;
+
         if (!isReloading)
             return currentAmmoInMagazine > 0;
 
@@ -198,6 +228,9 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public bool TryConsumeOneRound()
     {
+        if (!usesAmmoAndReload)
+            return true;
+
         if (currentAmmoInMagazine <= 0)
             return false;
 
@@ -207,6 +240,9 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public bool CanReload()
     {
+        if (!usesAmmoAndReload)
+            return false;
+
         if (isReloading)
             return false;
 
@@ -224,6 +260,9 @@ public class EnemyWeaponSettings : MonoBehaviour
 
     public bool TryStartReload()
     {
+        if (!usesAmmoAndReload)
+            return false;
+
         if (!CanReload())
             return false;
 
@@ -246,6 +285,7 @@ public class EnemyWeaponSettings : MonoBehaviour
     public void ForceClearReloadState()
     {
         isReloading = false;
+        UploadReloadingStatus();
         RestoreRigWeight();
 
         SetAnimatorReloadingBool(false);
@@ -313,18 +353,42 @@ public class EnemyWeaponSettings : MonoBehaviour
     private void BeginReloadProcess(bool keepReloadingInAnimator)
     {
         isReloading = true;
+        UploadReloadingStatus();
         ApplyReloadRigWeight();
+        ApplyWeaponAnimatorStateBeforeReload();
 
         SetAnimatorKeepReloadingBool(keepReloadingInAnimator);
+    }
+
+    private void ApplyWeaponAnimatorStateBeforeReload()
+    {
+        if (!applyWeaponAnimatorStateBeforeReload)
+            return;
+
+        if (weaponAnimatorState == null)
+            ResolveReferences();
+
+        if (weaponAnimatorState != null)
+            weaponAnimatorState.ApplyWeaponAnimatorState();
     }
 
     private void EndReloadProcess()
     {
         isReloading = false;
+        UploadReloadingStatus();
         RestoreRigWeight();
 
         SetAnimatorReloadingBool(false);
         SetAnimatorKeepReloadingBool(false);
+    }
+
+    private void UploadReloadingStatus()
+    {
+        if (enemyStatus == null)
+            enemyStatus = transform.root.GetComponent<EnemyStatus>();
+
+        if (enemyStatus != null)
+            enemyStatus.SetReloading(IsReloading);
     }
 
     private void SetAnimatorReloadingBool(bool value)

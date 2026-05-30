@@ -22,10 +22,14 @@ public partial class GoToLastKnownPositionAction : Action
     [SerializeField] public bool ClearCombatOnStart = true;
     [SerializeField] public bool InterruptWhenTargetSeen = true;
     [SerializeField] public bool PreferLastKnownMarker = true;
+    [SerializeField] public bool StopContinuousFacingWhileActive = true;
+    [SerializeField] public bool ClearAimingWhileActive = true;
+    [SerializeField] public bool ForceAgentRotation = true;
 
     private NavMeshAgent agent;
     private EnemyAnimatorParameterDriver animatorDriver;
     private EnemySensor sensor;
+    private EnemyContinuousFaceTargetController faceTargetController;
 
     private Vector3 destination;
 
@@ -37,12 +41,15 @@ public partial class GoToLastKnownPositionAction : Action
         agent = Self.Value.GetComponent<NavMeshAgent>();
         animatorDriver = Self.Value.GetComponent<EnemyAnimatorParameterDriver>();
         sensor = Self.Value.GetComponent<EnemySensor>();
+        faceTargetController = Self.Value.GetComponent<EnemyContinuousFaceTargetController>();
 
         if (agent == null)
             return Status.Failure;
 
         if (!TryResolveDestination(out destination))
             return Status.Failure;
+
+        StopFacingAndAiming();
 
         EnemyMoveMode moveMode = ResolveMoveMode();
 
@@ -55,7 +62,9 @@ public partial class GoToLastKnownPositionAction : Action
         }
 
         agent.isStopped = false;
-        agent.updateRotation = true;
+
+        if (ForceAgentRotation)
+            agent.updateRotation = true;
 
         if (NavMesh.SamplePosition(destination, out NavMeshHit hit, 2.0f, NavMesh.AllAreas))
             destination = hit.position;
@@ -69,6 +78,11 @@ public partial class GoToLastKnownPositionAction : Action
     {
         if (agent == null)
             return Status.Failure;
+
+        StopFacingAndAiming();
+
+        if (ForceAgentRotation)
+            agent.updateRotation = true;
 
         if (InterruptWhenTargetSeen && sensor != null)
         {
@@ -92,6 +106,15 @@ public partial class GoToLastKnownPositionAction : Action
 
     protected override void OnEnd()
     {
+    }
+
+    private void StopFacingAndAiming()
+    {
+        if (StopContinuousFacingWhileActive && faceTargetController != null)
+            faceTargetController.StopFacing();
+
+        if (ClearAimingWhileActive && animatorDriver != null)
+            animatorDriver.SetAiming(false);
     }
 
     private bool TryResolveDestination(out Vector3 resolvedDestination)
