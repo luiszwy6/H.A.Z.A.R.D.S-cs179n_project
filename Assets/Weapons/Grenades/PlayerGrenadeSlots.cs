@@ -101,6 +101,20 @@ public class PlayerGrenadeSlots : MonoBehaviour
         }
     }
 
+    public GrenadeSlot GetSlotByType(GrenadeType type)
+    {
+        if (grenadeSlots == null)
+            return null;
+
+        foreach (var slot in grenadeSlots)
+        {
+            if (slot != null && slot.grenadeType == type)
+                return slot;
+        }
+
+        return null;
+    }
+
     public bool HasUsableCurrentGrenade
     {
         get

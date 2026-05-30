@@ -20,6 +20,7 @@ public class WeaponAmmoSettings : MonoBehaviour
     [SerializeField] private PlayerMovement playerMovement;
     [SerializeField] private List<Rig> reloadDisableRigs = new List<Rig>();
 
+
     [Header("Ammo Settings")]
     [SerializeField] private TotalAmmoSetter.AmmoType ammoType = TotalAmmoSetter.AmmoType.AssaultRifle;
     [Min(1)] [SerializeField] private int magazineSize = 30;
@@ -65,6 +66,14 @@ public class WeaponAmmoSettings : MonoBehaviour
 
     public TotalAmmoSetter.AmmoType AmmoType => ammoType;
     public ReloadMode CurrentReloadMode => reloadMode;
+
+    public void AddReserveAmmo(int amount)
+    {
+        if (amount <= 0 || totalAmmoSetter == null)
+            return;
+
+        totalAmmoSetter.AddAmmo(ammoType, amount);
+    }
 
     public int MagazineSize => magazineSize;
     public int CurrentAmmoInMagazine => currentAmmoInMagazine;
