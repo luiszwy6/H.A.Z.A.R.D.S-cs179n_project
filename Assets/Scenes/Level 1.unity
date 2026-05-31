@@ -54668,6 +54668,10 @@ PrefabInstance:
       value: Enemy_Shotgun
       objectReference: {fileID: 0}
     - target: {fileID: 7281197194196174971, guid: 070026ba32637f34fadf39b874a6ea7a, type: 3}
+      propertyPath: bulletMaxDistance
+      value: 40
+      objectReference: {fileID: 0}
+    - target: {fileID: 7281197194196174971, guid: 070026ba32637f34fadf39b874a6ea7a, type: 3}
       propertyPath: bulletProjectilePrefab
       value: 
       objectReference: {fileID: 1072455145}
@@ -95342,7 +95346,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 71a17570f8ace7b44bb2b7920bdaa77c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BulletTimeAbility
-  maxResource: 10
+  maxResource: 1e+16
   drainPerSecond: 1
   regenPerSecond: 0.5
   timeScale: 0.2
@@ -95353,6 +95357,9 @@ MonoBehaviour:
   playerAffectedDuringSlideBulletTime: 1
   toggleCooldown: 1
   actionName: BulletTime
+  postProcessVolume: {fileID: 981574102}
+  normalProfile: {fileID: 11400000, guid: 8ad2449a7fc8ed04285da66e49122d11, type: 2}
+  bulletTimeProfile: {fileID: 11400000, guid: 190cca3e32ad16e49bfd1747ad5598c4, type: 2}
   playerMovement: {fileID: 7394970821019321527}
 --- !u!1 &5321974019417142905
 GameObject:

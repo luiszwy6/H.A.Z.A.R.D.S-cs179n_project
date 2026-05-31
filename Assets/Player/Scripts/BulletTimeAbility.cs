@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 
 [RequireComponent(typeof(PlayerInput))]
 public class BulletTimeAbility : MonoBehaviour
@@ -26,6 +27,11 @@ public class BulletTimeAbility : MonoBehaviour
 
     [Header("Input")]
     public string actionName = "BulletTime";
+
+    [Header("Volume")]
+    public Volume postProcessVolume;
+    public VolumeProfile normalProfile;
+    public VolumeProfile bulletTimeProfile;
 
     [Header("Player")]
     public PlayerMovement playerMovement;
@@ -245,6 +251,8 @@ public class BulletTimeAbility : MonoBehaviour
 
         lastAppliedPlayerAffected = playerAffected;
         hasAppliedTimeScale = true;
+
+        ApplyVolumeProfile(active: true);
     }
 
     private void ApplyPlayerTimeMode(bool playerAffected, float clampedScale)
@@ -282,6 +290,17 @@ public class BulletTimeAbility : MonoBehaviour
             playerAnimator.updateMode = defaultAnimatorUpdateMode;
 
         hasAppliedTimeScale = false;
+
+        ApplyVolumeProfile(active: false);
+    }
+
+    private void ApplyVolumeProfile(bool active)
+    {
+        if (postProcessVolume == null) return;
+
+        VolumeProfile target = active ? bulletTimeProfile : normalProfile;
+        if (target != null)
+            postProcessVolume.profile = target;
     }
 
     private void CachePlayerAnimator()
