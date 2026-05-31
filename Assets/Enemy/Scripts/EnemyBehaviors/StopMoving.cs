@@ -28,7 +28,7 @@ public partial class StopMovingAction : Action
 
         NavMeshAgent agent = Self.Value.GetComponent<NavMeshAgent>();
 
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return Status.Failure;
 
         EnemyAnimatorParameterDriver animatorDriver =

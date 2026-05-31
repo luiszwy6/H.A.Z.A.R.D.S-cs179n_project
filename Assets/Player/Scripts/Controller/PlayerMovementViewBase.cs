@@ -3,6 +3,7 @@ using UnityEngine;
 public abstract class PlayerMovementViewBase : MonoBehaviour
 {
     public virtual bool IsViewAiming => false;
+    public virtual bool DisablesRootMotionLocomotion => false;
     public virtual bool HasViewAimPoint => false;
     public virtual Vector3 ViewAimPoint => transform.position;
     public virtual Vector3 ViewAimWorldDir => transform.forward;

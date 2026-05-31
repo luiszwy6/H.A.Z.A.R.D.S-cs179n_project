@@ -647,6 +647,20 @@ public class EnemyHealth : MonoBehaviour
             ? GetComponents<Behaviour>()
             : GetComponentsInChildren<Behaviour>(includeInactiveBehavioursForShutdown);
 
+        // Stop the behavior tree first so action nodes cannot call NavMeshAgent methods
+        // on a disabled agent during the same frame.
+        if (disableBehaviorGraphAgentOnDeath)
+        {
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                Behaviour behaviour = behaviours[i];
+                if (behaviour == null || keepEnabled.Contains(behaviour)) continue;
+                if (!IsBehaviorGraphAgent(behaviour)) continue;
+                TryEndBehaviorGraphAgent(behaviour);
+                behaviour.enabled = false;
+            }
+        }
+
         for (int i = 0; i < behaviours.Length; i++)
         {
             Behaviour behaviour = behaviours[i];
@@ -658,6 +672,10 @@ public class EnemyHealth : MonoBehaviour
                 continue;
 
             if (!ShouldDisableBehaviourOnDeath(behaviour))
+                continue;
+
+            // Already stopped in pre-pass above
+            if (IsBehaviorGraphAgent(behaviour) && !behaviour.enabled)
                 continue;
 
             DisableBehaviourOnDeath(behaviour, false);

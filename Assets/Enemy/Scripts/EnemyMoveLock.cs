@@ -71,9 +71,8 @@ public class EnemyMovementLockController : MonoBehaviour
 
     private void ApplyLock()
     {
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
-            // This pauses movement but keeps the current path and destination.
             agent.isStopped = true;
 
             if (forceZeroVelocity)
@@ -89,7 +88,7 @@ public class EnemyMovementLockController : MonoBehaviour
         if (hasCachedAgentState)
             return;
 
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             cachedIsStopped = agent.isStopped;
             cachedUpdateRotation = agent.updateRotation;
@@ -106,7 +105,7 @@ public class EnemyMovementLockController : MonoBehaviour
         if (!hasCachedAgentState)
             return;
 
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             if (restoreStoppedStateOnUnlock)
                 agent.isStopped = cachedIsStopped;

@@ -185,6 +185,9 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         if (agent == null || animator == null)
             return;
 
+        if (!agent.enabled || !agent.isOnNavMesh)
+            return;
+
         Vector3 velocity = agent.velocity;
         Vector3 desiredVelocity = agent.desiredVelocity;
 

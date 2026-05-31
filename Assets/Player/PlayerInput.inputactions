@@ -106,7 +106,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Night Vision",
+                    "name": "NightVision",
                     "type": "Button",
                     "id": "56cfbf9b-532d-49bf-95a5-7a9c53a6c8f4",
                     "expectedControlType": "",
@@ -553,7 +553,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Night Vision",
+                    "action": "NightVision",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
@@ -564,7 +564,7 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Night Vision",
+                    "action": "NightVision",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

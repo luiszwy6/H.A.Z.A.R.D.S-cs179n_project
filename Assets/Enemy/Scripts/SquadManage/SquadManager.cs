@@ -55,11 +55,6 @@ public class SquadManager : MonoBehaviour
         RefreshMemberTypeLists();
     }
 
-    private void Update()
-    {
-        RefreshMemberTypeLists();
-    }
-
     private void CollectMembersInChildren()
     {
         SquadMember[] foundMembers = GetComponentsInChildren<SquadMember>();

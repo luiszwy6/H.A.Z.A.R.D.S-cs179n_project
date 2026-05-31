@@ -1,0 +1,206 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &4210551536202590740
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -1.32
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -19.44
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -1.09573
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5780192615464639018, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5780192615464639018, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5780192615464639018, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5780192615464639018, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5780192615464639018, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: delay
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: pinPrefab
+      value: 
+      objectReference: {fileID: 8577781512164699884}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: smokeObject
+      value: 
+      objectReference: {fileID: 5860438257419272521}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: smokeDuration
+      value: 25
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: smokeSpawnDelay
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: visionBlockDelay
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: visionBlockRadius
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: destroyThisObjectOnEnd
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: destroySmokeObjectOnEnd
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: grenadeDestroyDelayAfterSmoke
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6572082220235954016, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: hideGrenadeVisualAfterSmokeSpawn
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7726655081289968477, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      propertyPath: m_Name
+      value: P_Smoke_Grenade_URP Variant
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7726655081289968477, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2027996955144582109}
+    - targetCorrespondingSourceObject: {fileID: 7726655081289968477, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8113557834790942668}
+  m_SourcePrefab: {fileID: 100100000, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+--- !u!4 &1305537379200880661 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2914058774548838913, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+  m_PrefabInstance: {fileID: 4210551536202590740}
+  m_PrefabAsset: {fileID: 0}
+--- !u!54 &1892303731214910632 stripped
+Rigidbody:
+  m_CorrespondingSourceObject: {fileID: 2318283330277256892, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+  m_PrefabInstance: {fileID: 4210551536202590740}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &5860438257419272521 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7726655081289968477, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+  m_PrefabInstance: {fileID: 4210551536202590740}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2027996955144582109
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5860438257419272521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 814acc47172e7b949ad7237e02c10013, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SmokeVisionBlocker
+  radius: 8
+  blockVision: 1
+--- !u!114 &8113557834790942668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5860438257419272521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6776f5a41098d2468a41f39b198f43a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GrenadeWorldController
+  rb: {fileID: 1892303731214910632}
+  effectRoot: {fileID: 1305537379200880661}
+  visualRoot: {fileID: 5860438257419272521}
+  grenadeType: 2
+  triggerExistingGrenadeScriptOnLaunch: 1
+  existingGrenadeArmMethodName: ArmGrenade
+  broadcastArmMethodToChildren: 1
+  disableControllerFuseWhenUsingExistingScript: 1
+  armOnLaunch: 0
+  useFuse: 1
+  fuseTime: 3
+  activateOnImpact: 0
+  impactLayers:
+    serializedVersion: 2
+    m_Bits: 72
+  minimumImpactSpeed: 2
+  ignoreOwnerCollisionOnLaunch: 1
+  restoreOwnerCollisionAfterDelay: 1
+  ownerCollisionIgnoreDuration: 0.35
+  includeInactiveOwnerColliders: 1
+  detachEffectRootOnActivate: 1
+  hideVisualOnActivate: 1
+  disableCollidersOnActivate: 1
+  freezeRigidbodyOnActivate: 1
+  destroyGrenadeObjectAfterActivate: 1
+  destroyDelay: 0.05
+  destroyDetachedEffectRoot: 0
+  detachedEffectRootDestroyDelay: 10
+  logState: 0
+  logExistingGrenadeScriptTrigger: 1
+  logOwnerCollisionIgnore: 0
+--- !u!1 &8577781512164699884 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5576727953253451000, guid: ced084c5aea9da544a0111ac6eb16d42, type: 3}
+  m_PrefabInstance: {fileID: 4210551536202590740}
+  m_PrefabAsset: {fileID: 0}

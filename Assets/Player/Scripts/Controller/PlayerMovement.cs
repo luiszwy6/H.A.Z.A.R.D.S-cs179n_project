@@ -665,18 +665,35 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 delta = Vector3.zero;
 
+        bool isFpsView = activeView != null && activeView.DisablesRootMotionLocomotion;
+        bool fpsNoAimMode = isFpsView && !isAiming;
+
         if (useRootMotionLocomotion && hasMoveInput && !recoveryLocked)
         {
             float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
             if (animator.updateMode == AnimatorUpdateMode.UnscaledTime)
                 speedMult = 1f;
 
-            float rootSpeed = animator.deltaPosition.magnitude;
-
-            if (rootSpeed > 0.00001f && cachedMoveDirWorld.sqrMagnitude > 0.0001f)
-                delta = cachedMoveDirWorld.normalized * rootSpeed * rootMotionScale * speedMult;
+            if (fpsNoAimMode)
+            {
+                if (cachedMoveDirWorld.sqrMagnitude > 0.0001f)
+                {
+                    float speed = isRunningState ? runSpeed :
+                                  isProne        ? proneSpeed :
+                                  isCrouching    ? crouchSpeed :
+                                                   walkSpeed;
+                    delta = cachedMoveDirWorld.normalized * speed * rootMotionScale * speedMult * Time.deltaTime;
+                }
+            }
             else
-                delta = animator.deltaPosition * rootMotionScale * speedMult;
+            {
+                float rootSpeed = animator.deltaPosition.magnitude;
+
+                if (rootSpeed > 0.00001f && cachedMoveDirWorld.sqrMagnitude > 0.0001f)
+                    delta = cachedMoveDirWorld.normalized * rootSpeed * rootMotionScale * speedMult;
+                else if (!isFpsView)
+                    delta = animator.deltaPosition * rootMotionScale * speedMult;
+            }
 
             delta.y = 0f;
         }

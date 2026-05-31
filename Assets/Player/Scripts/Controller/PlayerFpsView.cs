@@ -49,6 +49,7 @@ public class PlayerFpsView : PlayerMovementViewBase
     public float Yaw => yaw;
     public float Pitch => pitch;
 
+    public override bool DisablesRootMotionLocomotion => true;
     public override bool IsViewAiming => IsAimHeld;
     public override bool HasViewAimPoint => hasAimPoint;
     public override Vector3 ViewAimPoint => aimPoint;

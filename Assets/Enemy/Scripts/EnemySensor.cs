@@ -73,12 +73,15 @@ public class EnemySensor : MonoBehaviour
     [SerializeField] private bool autoUpdate = true;
 
     [Header("Debug")]
-    [SerializeField] private bool debugDrawRay = true;
+    [SerializeField] private bool debugDrawRay = false;
     [SerializeField] private bool debugDrawGizmos = true;
     [SerializeField] private float debugRayDuration = 0f;
 
     [SerializeField] private bool canSeeTarget;
     [SerializeField] private float distanceToTarget;
+
+    private PlayerStatus cachedPlayerStatus;
+    private int lastRefreshFrame = -1;
 
     [Header("Debug Lost Sight")]
     [SerializeField] private bool targetLocked;
@@ -189,7 +192,9 @@ public class EnemySensor : MonoBehaviour
 
     public void RefreshSensor()
     {
-        EnsureLastKnownPositionMarker();
+        if (lastRefreshFrame == Time.frameCount)
+            return;
+        lastRefreshFrame = Time.frameCount;
 
         if (target == null)
         {
@@ -368,12 +373,14 @@ public class EnemySensor : MonoBehaviour
 
         if (!damageRevealIgnoresInvisibility)
         {
-            PlayerStatus playerStatus = revealTarget.GetComponentInParent<PlayerStatus>();
+            if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != revealTarget.root)
+            {
+                cachedPlayerStatus = revealTarget.GetComponentInParent<PlayerStatus>();
+                if (cachedPlayerStatus == null)
+                    cachedPlayerStatus = revealTarget.GetComponentInChildren<PlayerStatus>();
+            }
 
-            if (playerStatus == null)
-                playerStatus = revealTarget.GetComponentInChildren<PlayerStatus>();
-
-            if (playerStatus != null && playerStatus.IsInvisible)
+            if (cachedPlayerStatus != null && cachedPlayerStatus.IsInvisible)
                 return;
         }
 
@@ -486,12 +493,14 @@ public class EnemySensor : MonoBehaviour
         if (target == null)
             return false;
 
-        PlayerStatus playerStatus = target.GetComponentInParent<PlayerStatus>();
+        if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != target.root)
+        {
+            cachedPlayerStatus = target.GetComponentInParent<PlayerStatus>();
+            if (cachedPlayerStatus == null)
+                cachedPlayerStatus = target.GetComponentInChildren<PlayerStatus>();
+        }
 
-        if (playerStatus == null)
-            playerStatus = target.GetComponentInChildren<PlayerStatus>();
-
-        return playerStatus != null && playerStatus.IsInvisible;
+        return cachedPlayerStatus != null && cachedPlayerStatus.IsInvisible;
     }
 
     private void UpdateLastKnownPositionMarker()

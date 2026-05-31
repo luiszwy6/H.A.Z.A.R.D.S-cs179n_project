@@ -73,7 +73,7 @@ public partial class AimingAtAction : Action
         if (moveMode != EnemyMoveMode.None)
             animatorDriver.SetMoveMode(moveMode);
 
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             if (ResolveStopMoving())
             {
@@ -102,7 +102,7 @@ public partial class AimingAtAction : Action
         if (animatorDriver != null)
             animatorDriver.SetAiming(aiming);
 
-        if (agent != null && stopMoving)
+        if (agent != null && agent.enabled && agent.isOnNavMesh && stopMoving)
         {
             agent.isStopped = true;
 
@@ -185,7 +185,7 @@ public partial class AimingAtAction : Action
         if (!ResolveRequireStoppedBeforeSuccess())
             return true;
 
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return true;
 
         if (agent.pathPending)

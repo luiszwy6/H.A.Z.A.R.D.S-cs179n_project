@@ -122,7 +122,7 @@ public partial class ReloadWeaponAction : Action
 
     private void ApplyMovementRule()
     {
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return;
 
         if (ResolveCanMoveWhileReloading())

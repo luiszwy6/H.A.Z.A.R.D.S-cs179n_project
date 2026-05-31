@@ -91,7 +91,7 @@ public partial class PatrolAroundLastKnownPositionAction : Action
 
     protected override Status OnUpdate()
     {
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return Status.Failure;
 
         if (Self == null || Self.Value == null)

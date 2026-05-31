@@ -76,7 +76,7 @@ public partial class GoToLastKnownPositionAction : Action
 
     protected override Status OnUpdate()
     {
-        if (agent == null)
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return Status.Failure;
 
         StopFacingAndAiming();

@@ -39,7 +39,7 @@ public partial class ClearEnemyCombatAction : Action
 
         NavMeshAgent agent = Self.Value.GetComponent<NavMeshAgent>();
 
-        if (agent != null)
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             if (RestoreAgentRotation)
                 agent.updateRotation = true;

@@ -329,61 +329,42 @@ private void Update()
         isMovingToCover = true;
         isInCover = false;
 
-        ApplyTemporaryEnterLock();
-
         if (forceCrouch)
             ApplyLowCoverCrouch();
 
-        Vector3 startPosition = transform.position;
-        Quaternion startRotation = transform.rotation;
-
-        if (controller != null)
-            controller.enabled = false;
-
-        float elapsed = 0f;
-
-        while (elapsed < enterCoverDuration)
+        if (rotateToCover)
         {
-            elapsed += Time.deltaTime;
+            Quaternion startRotation = transform.rotation;
+            float elapsed = 0f;
 
-            float t = enterCoverDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(elapsed / enterCoverDuration);
+            while (elapsed < enterCoverDuration)
+            {
+                elapsed += Time.deltaTime;
 
-            float smoothT = t * t * (3f - 2f * t);
+                float t = enterCoverDuration <= 0f
+                    ? 1f
+                    : Mathf.Clamp01(elapsed / enterCoverDuration);
 
-            transform.position = Vector3.Lerp(startPosition, targetPosition, smoothT);
+                float smoothT = t * t * (3f - 2f * t);
 
-            if (rotateToCover)
                 transform.rotation = Quaternion.Slerp(startRotation, targetRotation, smoothT);
 
+                yield return null;
+            }
+
+            transform.rotation = targetRotation;
+        }
+        else
+        {
             yield return null;
         }
-
-        transform.position = targetPosition;
-
-        if (rotateToCover)
-            transform.rotation = targetRotation;
-
-        if (controller != null)
-            controller.enabled = true;
 
         isMovingToCover = false;
         isInCover = true;
         enteredCoverTime = Time.time;
 
-        ReleaseTemporaryEnterLock();
-
         if (playerStatus != null)
             playerStatus.SetInCover(true, currentCover);
-
-        if (slowDownWhenEnteringCover)
-        {
-            ApplyCoverSlowdown(
-                enterCoverSpeedMultiplier,
-                enterCoverSlowDuration
-            );
-        }
     }
 
     private void ExitCover(bool suppressAutoReenter, bool applyLeaveSlowdown)
