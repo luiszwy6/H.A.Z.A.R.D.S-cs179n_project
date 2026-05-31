@@ -94,6 +94,20 @@ public class EnemySquadGenerator : MonoBehaviour
         hasSpawnedCurrentRound = true;
         hasSpawnedAny = true;
 
+        SpawnSquadEntries(config);
+    }
+
+    // Called per-group inside WaveRoutine; round state is managed by the wave, not here.
+    private void SpawnSquadForWave(SquadConfig config)
+    {
+        if (spawnHalted || config == null)
+            return;
+
+        SpawnSquadEntries(config);
+    }
+
+    private void SpawnSquadEntries(SquadConfig config)
+    {
         foreach (var entry in config.entries)
         {
             if (entry.enemyPrototype == null)
@@ -180,18 +194,31 @@ public class EnemySquadGenerator : MonoBehaviour
         if (wave.delayAfterPreviousClear > 0f)
             yield return new WaitForSeconds(wave.delayAfterPreviousClear);
 
-        activeSpawnPoints = wave.spawnPointOverride != null && wave.spawnPointOverride.Count > 0
-            ? wave.spawnPointOverride
-            : null;
+        currentRoundMembers.Clear();
+        hasSpawnedAny = true;
 
-        SquadConfig config = wave.configIndex >= 0 && wave.configIndex < squadConfigs.Count
-            ? squadConfigs[wave.configIndex]
-            : null;
+        foreach (WaveSpawnGroup group in wave.groups)
+        {
+            SquadConfig config = group.configIndex >= 0 && group.configIndex < squadConfigs.Count
+                ? squadConfigs[group.configIndex]
+                : null;
 
-        for (int i = 0; i < wave.spawnCount; i++)
-            SpawnSquad(config);
+            activeSpawnPoints = group.spawnPoints != null && group.spawnPoints.Count > 0
+                ? group.spawnPoints
+                : null;
+
+            for (int i = 0; i < group.spawnCount; i++)
+                SpawnSquadForWave(config);
+        }
 
         activeSpawnPoints = null;
+
+        // Unlock condition checking only after ALL groups are in currentRoundMembers.
+        // LaunchWave sets allDiedThisRoundFired = true to block early triggers;
+        // we lower it here once every enemy for this wave is registered.
+        hasSpawnedCurrentRound = true;
+        allDiedThisRoundFired = false;
+
         waveRoutine = null;
     }
 
@@ -281,6 +308,21 @@ public class EnemySquadGenerator : MonoBehaviour
             if (p == null) continue;
             Gizmos.DrawWireSphere(p.position, spawnRadius);
             Gizmos.DrawLine(transform.position, p.position);
+        }
+
+        Color[] groupColors = { Color.cyan, Color.green, Color.magenta, Color.red };
+        foreach (var wave in waves)
+        {
+            for (int g = 0; g < wave.groups.Count; g++)
+            {
+                Gizmos.color = groupColors[g % groupColors.Length];
+                foreach (var p in wave.groups[g].spawnPoints)
+                {
+                    if (p == null) continue;
+                    Gizmos.DrawWireSphere(p.position, spawnRadius);
+                    Gizmos.DrawLine(transform.position, p.position);
+                }
+            }
         }
     }
 }
