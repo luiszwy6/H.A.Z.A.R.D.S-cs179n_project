@@ -288,9 +288,32 @@ public class EnemySquadGenerator : MonoBehaviour
         {
             SquadMember m = list[i];
             if (m == null) { list.RemoveAt(i); continue; }
+
+            if (IsSquadMemberDeadByHealth(m))
+            {
+                m.MarkDead();
+                continue;
+            }
+
             if (m.IsAlive) alive++;
         }
         return alive;
+    }
+
+    private static bool IsSquadMemberDeadByHealth(SquadMember member)
+    {
+        if (member == null)
+            return true;
+
+        EnemyHealth health = member.GetComponent<EnemyHealth>();
+
+        if (health == null)
+            health = member.GetComponentInChildren<EnemyHealth>(true);
+
+        if (health == null)
+            health = member.GetComponentInParent<EnemyHealth>();
+
+        return health != null && health.IsDead;
     }
 
     private Vector3 GetSpawnPosition()
