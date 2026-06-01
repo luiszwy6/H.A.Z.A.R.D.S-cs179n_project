@@ -133,6 +133,8 @@ public class EnemySquadGenerator : MonoBehaviour
 
     public void TriggerSpawn(int configIndex)
     {
+        bool wasGenerating = IsStartingGenerate;
+
         if (waves.Count > 0)
         {
             LaunchWave(0);
@@ -142,6 +144,9 @@ public class EnemySquadGenerator : MonoBehaviour
             for (int i = 0; i < spawnCountOnTrigger; i++)
                 SpawnSquad(configIndex);
         }
+
+        if (!wasGenerating && IsStartingGenerate)
+            OnStartedGenerating?.Invoke();
     }
 
     public SquadMember GetFirstAliveSpawnedMember()
@@ -154,6 +159,10 @@ public class EnemySquadGenerator : MonoBehaviour
         }
         return null;
     }
+
+    public bool IsStartingGenerate => hasSpawnedAny || waveRoutine != null;
+
+    public event System.Action OnStartedGenerating;
 
     public void HaltSpawning() => spawnHalted = true;
 
@@ -224,7 +233,7 @@ public class EnemySquadGenerator : MonoBehaviour
 
     // ── Internals ────────────────────────────────────────────────
 
-    private void HandleAnyEnemyDied()
+    private void HandleAnyEnemyDied(EnemyHealth _)
     {
         if (allClearFired)
             return;

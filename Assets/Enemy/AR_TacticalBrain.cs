@@ -1249,6 +1249,13 @@ public class AR_TacticalBrain : MonoBehaviour
             return false;
         }
 
+        if (currentReason == TacticalMoveReason.PreferredRange &&
+            hasTacticalMoveTarget &&
+            Vector3.Distance(transform.position, tacticalMovePosition) > 0.1f)
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -1498,11 +1505,11 @@ public class AR_TacticalBrain : MonoBehaviour
         if (!TrySampleNavMeshPosition(candidatePosition, sampleRadius, out preferredPosition))
             return false;
 
-        if (requirePreferredRangeNavMeshReachable &&
-            !IsNavMeshReachable(preferredPosition))
-        {
+        if (requirePreferredRangeNavMeshReachable && !IsNavMeshReachable(preferredPosition))
             return false;
-        }
+
+        if (Vector3.Distance(transform.position, preferredPosition) <= Mathf.Max(0f, stopTolerance))
+            return false;
 
         return true;
     }
@@ -2989,16 +2996,9 @@ public class AR_TacticalBrain : MonoBehaviour
 
     private void ApplyBaseTacticalMovePointState()
     {
-        if (ShouldKeepBaseTacticalMovePoint())
-        {
-            hasTacticalMoveTarget = true;
-            SetMovePointToEnemyPosition();
-            return;
-        }
-
         hasTacticalMoveTarget = false;
 
-        if (movePointToEnemyPositionWhenNoTarget)
+        if (ShouldKeepBaseTacticalMovePoint() || movePointToEnemyPositionWhenNoTarget)
             SetMovePointToEnemyPosition();
     }
 

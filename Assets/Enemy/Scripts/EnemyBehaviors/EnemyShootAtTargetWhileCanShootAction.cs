@@ -17,9 +17,9 @@ public partial class EnemyShootAtTargetWhileCanShootAction : Action
     [SerializeReference] public BlackboardVariable<GameObject> Target;
     [SerializeReference] public BlackboardVariable<float> TargetHeightOffset;
 
-    [SerializeField] public bool RequireSensorCanSeeTarget = true;
-    [SerializeField] public bool ReturnSuccessWhenCannotShoot = false;
-    [SerializeField] public bool ReturnRunningWhileCanShoot = false;
+    [SerializeReference] public BlackboardVariable<bool> RequireSensorCanSeeTarget;
+    [SerializeReference] public BlackboardVariable<bool> ReturnSuccessWhenCannotShoot;
+    [SerializeReference] public BlackboardVariable<bool> ReturnRunningWhileCanShoot;
 
     [Header("Aim Control")]
     [SerializeReference] public BlackboardVariable<bool> SetAnimatorAiming;
@@ -77,10 +77,10 @@ public partial class EnemyShootAtTargetWhileCanShootAction : Action
         {
             clearRuntimeStateOnEnd = true;
             ForceClearAttackRuntimeState();
-            return ReturnSuccessWhenCannotShoot ? Status.Success : Status.Failure;
+            return EnemyShootAimGate.ResolveBool(ReturnSuccessWhenCannotShoot, false) ? Status.Success : Status.Failure;
         }
 
-        if (RequireSensorCanSeeTarget && sensor != null)
+        if (EnemyShootAimGate.ResolveBool(RequireSensorCanSeeTarget, true) && sensor != null)
         {
             sensor.RefreshSensor();
 
@@ -210,7 +210,7 @@ public partial class EnemyShootAtTargetWhileCanShootAction : Action
 
     private bool ReturnSuccessWhenActive()
     {
-        return !ReturnRunningWhileCanShoot;
+        return !EnemyShootAimGate.ResolveBool(ReturnRunningWhileCanShoot, false);
     }
 
     private void ForceClearAttackRuntimeState()

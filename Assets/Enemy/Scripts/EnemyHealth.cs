@@ -55,6 +55,11 @@ public class EnemyHealth : MonoBehaviour
         [Min(0f)] public float sleepDisableMecanimAfter = 2.5f;
     }
 
+    public enum EnemyType { Soldier, Zombie }
+
+    [Header("Enemy Type")]
+    [SerializeField] private EnemyType enemyType = EnemyType.Soldier;
+
     [Header("Health")]
     [SerializeField] private float base_Health = 100f;
     [SerializeField] private float currentHealth = 100f;
@@ -128,6 +133,9 @@ public class EnemyHealth : MonoBehaviour
     [Header("Force Disable Child Behaviours")]
     [Tooltip("Disables all non-Animator Behaviours on child objects unconditionally, regardless of shutdown mode settings.")]
     [SerializeField] private bool forceDisableChildBehavioursOnDeath = true;
+
+    [Header("Death Weapon GameObject Disable")]
+    [SerializeField] private bool disableWeaponGameObjectsOnDeath = true;
 
     [Header("Custom Shutdown Types")]
     [SerializeField] private bool disableAnimatorOnDeath = false;
@@ -218,12 +226,13 @@ public class EnemyHealth : MonoBehaviour
         "muscleWeight"
     };
 
-    public static event System.Action OnAnyEnemyDied;
+    public static event System.Action<EnemyHealth> OnAnyEnemyDied;
 
     public float BaseHealth => base_Health;
     public float CurrentHealth => currentHealth;
     public int CurrentArmorLevel => Mathf.Clamp(ArmorLevel, 0, 2);
     public bool IsDead => isDead;
+    public EnemyType Type => enemyType;
 
     private void Reset()
     {
@@ -574,7 +583,10 @@ public class EnemyHealth : MonoBehaviour
             SetHitboxesEnabled(false);
 
         onDeath?.Invoke();
-        OnAnyEnemyDied?.Invoke();
+        OnAnyEnemyDied?.Invoke(this);
+
+        if (disableWeaponGameObjectsOnDeath)
+            DisableWeaponGameObjects();
 
         if (forceDisableChildBehavioursOnDeath)
             ForceDisableChildBehaviours();
@@ -835,6 +847,25 @@ public class EnemyHealth : MonoBehaviour
             return disableWeaponShootersOnDeath;
 
         return disableOtherBehavioursOnDeath;
+    }
+
+    private void DisableWeaponGameObjects()
+    {
+        EnemyWeaponShooter[] shooters = GetComponentsInChildren<EnemyWeaponShooter>(true);
+
+        for (int i = 0; i < shooters.Length; i++)
+        {
+            if (shooters[i] != null)
+                shooters[i].gameObject.SetActive(false);
+        }
+
+        EnemyMeleeAttacker[] meleeAttackers = GetComponentsInChildren<EnemyMeleeAttacker>(true);
+
+        for (int i = 0; i < meleeAttackers.Length; i++)
+        {
+            if (meleeAttackers[i] != null)
+                meleeAttackers[i].gameObject.SetActive(false);
+        }
     }
 
     private void ForceDisableChildBehaviours()

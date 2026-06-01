@@ -30,7 +30,7 @@ public class EnemyAlertSpawner : MonoBehaviour
 
     private void Trigger()
     {
-        if (generator != null)
+        if (generator != null && !generator.IsStartingGenerate)
         {
             generator.TriggerSpawn(configIndex);
 

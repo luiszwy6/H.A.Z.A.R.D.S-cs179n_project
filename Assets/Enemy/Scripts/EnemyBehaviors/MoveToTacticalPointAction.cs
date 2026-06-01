@@ -25,6 +25,7 @@ public partial class MoveToTacticalMovePointAction : Action
     [SerializeField] private bool resetPathOnSuccess = true;
     [SerializeField] private bool failIfPointMissing = true;
     [SerializeField] private bool waitForTacticalMovePointReleasedOnReach = false;
+    [Min(0f)] [SerializeField] private float waitReleaseTimeout = 0.5f;
 
     [Header("Interrupt")]
     [SerializeField] private bool abortIfCannotSeeTarget = true;
@@ -32,6 +33,7 @@ public partial class MoveToTacticalMovePointAction : Action
     private NavMeshAgent agent;
     private EnemyAnimatorParameterDriver animatorDriver;
     private EnemyStatus enemyStatus;
+    private float reachTime = -1f;
 
     protected override Status OnStart()
     {
@@ -53,6 +55,7 @@ public partial class MoveToTacticalMovePointAction : Action
         if (animatorDriver != null)
             animatorDriver.SetMoveMode(moveMode);
 
+        reachTime = -1f;
         agent.isStopped = false;
         agent.SetDestination(TacticalMovePoint.Value.position);
 
@@ -81,30 +84,34 @@ public partial class MoveToTacticalMovePointAction : Action
         float stopDistance = StopDistance != null ? StopDistance.Value : 0.75f;
         Vector3 destination = TacticalMovePoint.Value.position;
 
-        agent.isStopped = false;
+        float distance = Vector3.Distance(Self.Value.transform.position, destination);
 
-        if (!agent.pathPending)
+        if (distance <= stopDistance)
         {
-            float distance = Vector3.Distance(
-                Self.Value.transform.position,
-                destination
-            );
+            agent.isStopped = true;
 
-            if (distance <= stopDistance)
+            if (resetPathOnSuccess)
+                agent.ResetPath();
+
+            if (ShouldWaitForTacticalMovePointRelease())
             {
-                agent.isStopped = true;
+                if (reachTime < 0f)
+                    reachTime = Time.time;
 
-                if (resetPathOnSuccess)
-                    agent.ResetPath();
-
-                if (ShouldWaitForTacticalMovePointRelease())
+                if (waitReleaseTimeout <= 0f || Time.time - reachTime < waitReleaseTimeout)
                     return Status.Running;
-
-                return Status.Success;
             }
+
+            reachTime = -1f;
+            return Status.Success;
         }
 
-        if (!agent.hasPath || Vector3.Distance(agent.destination, destination) > 0.25f)
+        reachTime = -1f;
+
+        agent.isStopped = false;
+
+        if (!agent.pathPending &&
+            (!agent.hasPath || Vector3.Distance(agent.destination, destination) > 0.25f))
         {
             agent.SetDestination(destination);
         }

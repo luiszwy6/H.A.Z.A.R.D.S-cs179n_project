@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Pickups
@@ -11,12 +12,22 @@ namespace Pickups
 
     public class Pickup : MonoBehaviour
     {
+        [System.Serializable]
+        public class AmmoPickupEntry
+        {
+            public TotalAmmoSetter.AmmoType ammoType = TotalAmmoSetter.AmmoType.AssaultRifle;
+            [Min(0)] public int amount = 30;
+        }
+
         [Header("Pickup Settings")]
         [Tooltip("Type of pickup")]
         [SerializeField] private PickupType pickupType = PickupType.Health;
 
-        [Tooltip("Amount to give (health points, ammo count, or grenade count)")]
+        [Tooltip("Health points to restore (Health pickups only)")]
         [SerializeField] private int amount = 10;
+
+        [Tooltip("Ammo to add per type (Ammo pickups only)")]
+        [SerializeField] private List<AmmoPickupEntry> ammoEntries = new List<AmmoPickupEntry>();
 
         [Tooltip("For grenade pickups, specify the grenade type")]
         [SerializeField] private PlayerGrenadeSlots.GrenadeType grenadeType = PlayerGrenadeSlots.GrenadeType.Frag;
@@ -58,13 +69,15 @@ namespace Pickups
                     break;
 
                 case PickupType.Ammo:
-                    var weaponSlots = player.GetComponent<PlayerWeaponSlots>();
-                    if (weaponSlots == null)
+                    if (ammoEntries == null || ammoEntries.Count == 0)
                         break;
 
-                    var ammoSettings = weaponSlots.CurrentAmmoSettings;
-                    if (ammoSettings != null)
-                        ammoSettings.AddReserveAmmo(amount);
+                    var totalAmmo = player.GetComponentInChildren<TotalAmmoSetter>();
+                    if (totalAmmo == null)
+                        break;
+
+                    foreach (AmmoPickupEntry entry in ammoEntries)
+                        totalAmmo.AddAmmo(entry.ammoType, entry.amount);
                     break;
 
                 case PickupType.Grenade:
