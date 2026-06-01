@@ -72,7 +72,7 @@ MonoBehaviour:
   amount: 45
   ammoEntries: []
   grenadeType: 0
-  pickupSound: {fileID: 0}
+  pickupSound: {fileID: 8300000, guid: 94ef774de3e349d4189701c0b45c1c64, type: 3}
   pickupEffect: {fileID: 0}
   destroyOnPickup: 1
 --- !u!1 &4144781095517187923

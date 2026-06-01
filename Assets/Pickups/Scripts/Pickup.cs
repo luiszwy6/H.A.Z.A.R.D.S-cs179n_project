@@ -33,13 +33,12 @@ namespace Pickups
         [SerializeField] private PlayerGrenadeSlots.GrenadeType grenadeType = PlayerGrenadeSlots.GrenadeType.Frag;
 
         [Header("Effects")]
-        [Tooltip("Optional pickup sound effect")]
         [SerializeField] private AudioClip pickupSound;
+        [Range(0f, 1f)] [SerializeField] private float pickupSoundVolume = 1f;
+        [Tooltip("If assigned, plays through this AudioSource (2D). Otherwise plays at world position (3D).")]
+        [SerializeField] private AudioSource pickupAudioSource;
 
-        [Tooltip("Optional particle effect to spawn on pickup")]
         [SerializeField] private GameObject pickupEffect;
-
-        [Tooltip("Whether to destroy the pickup after being collected")]
         [SerializeField] private bool destroyOnPickup = true;
 
         private void OnTriggerEnter(Collider other)
@@ -51,7 +50,12 @@ namespace Pickups
             ApplyPickup(player);
 
             if (pickupSound != null)
-                AudioSource.PlayClipAtPoint(pickupSound, transform.position);
+            {
+                if (pickupAudioSource != null)
+                    pickupAudioSource.PlayOneShot(pickupSound, pickupSoundVolume);
+                else
+                    AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupSoundVolume);
+            }
 
             if (pickupEffect != null)
                 Instantiate(pickupEffect, transform.position, Quaternion.identity);

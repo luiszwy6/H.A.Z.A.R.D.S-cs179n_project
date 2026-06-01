@@ -159,7 +159,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Pickups.Pickup
   pickupType: 2
   amount: 1
+  ammoEntries: []
   grenadeType: 0
-  pickupSound: {fileID: 0}
+  pickupSound: {fileID: 8300000, guid: 9f592da575de1a84a9d4bee60950a207, type: 3}
   pickupEffect: {fileID: 0}
   destroyOnPickup: 1
