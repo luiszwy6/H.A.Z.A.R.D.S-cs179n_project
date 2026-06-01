@@ -32672,6 +32672,8 @@ GameObject:
   - component: {fileID: 3680612284187929865}
   - component: {fileID: 8817304485114137952}
   - component: {fileID: 2117627627781711899}
+  - component: {fileID: 8365082929297869873}
+  - component: {fileID: 726024797522284182}
   m_Layer: 8
   m_Name: Enemy_Sniper
   m_TagString: Untagged
@@ -35366,6 +35368,39 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &8365082929297869873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8330998268064832078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb07372c45f918543865b8586df5c782, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Pickups.PickupDropper
+  dropTable:
+  - pickupPrefab: {fileID: 3482775926892506042, guid: fdcc61e8eb008e64988accc033d7e9ac, type: 3}
+    dropChance: 0.4
+  - pickupPrefab: {fileID: 8131743258214923053, guid: dc5f5e4127f188e48bc7c497eed030a0, type: 3}
+    dropChance: 0.4
+  - pickupPrefab: {fileID: 8984785852913815517, guid: 11950f9965da6f748b196256d78da6be, type: 3}
+    dropChance: 0.2
+  spawnOffset: {x: 0, y: 0.5, z: 0}
+  randomSpread: 0.3
+--- !u!114 &726024797522284182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8330998268064832078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4d52752ba46607e48a2794bfd4270636, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyDropOnDeath
 --- !u!1 &8387597748371981529
 GameObject:
   m_ObjectHideFlags: 0
