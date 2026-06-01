@@ -35,7 +35,7 @@ public class EnemyVictoryChecker : MonoBehaviour
         CheckForVictory();
     }
 
-    private void HandleEnemyDied()
+    private void HandleEnemyDied(EnemyHealth _)
     {
         CheckForVictory();
     }

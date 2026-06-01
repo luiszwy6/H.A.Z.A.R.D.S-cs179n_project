@@ -69,7 +69,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Pickups.Pickup
   pickupType: 0
-  amount: 20
+  amount: 40
   ammoEntries: []
   grenadeType: 0
   pickupSound: {fileID: 0}
