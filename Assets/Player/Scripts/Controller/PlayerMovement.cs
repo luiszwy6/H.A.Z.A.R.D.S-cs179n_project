@@ -57,6 +57,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private bool allowSlideExitToRun = true;
     [SerializeField] private bool slideExitToCrouchWhenNotRunning = true;
 
+    [Header("Run Input")]
+    [SerializeField] private bool useToggleRun = false;
+    [SerializeField] private bool clearToggleRunWhenInterrupted = true;
+    [SerializeField] private bool cancelToggleRunWhenAiming = true;
+
     [Header("Slide Shooting")]
     [SerializeField] private bool allowQuickShotDuringSlide = true;
     [SerializeField] private bool allowAimShootDuringSlide = true;
@@ -69,6 +74,7 @@ public class PlayerMovement : MonoBehaviour
 
     [Header("External Locks")]
     public bool externalMovementLock = false;
+    public bool externalMoveInputLock = false; // blocks translation/run/dive/slide but NOT rotation
     public bool externalAnimatorLocomotionLock = false;
 
     private Animator animator;
@@ -123,6 +129,11 @@ public class PlayerMovement : MonoBehaviour
     private string lastLoggedState = "";
     private bool isWalkingState;
     private bool isRunningState;
+    private bool runToggleActive;
+
+    [Header("Grounded Buffer")]
+    [SerializeField] private float groundedBufferTime = 0.12f;
+    private float lastGroundedTime = -999f;
 
     private bool externalCrouchLock;
     private bool externalCrouchLockValue;
@@ -155,7 +166,7 @@ public class PlayerMovement : MonoBehaviour
 
     public bool CanQuickShotNow =>
         !isDiving &&
-        !isRunningState &&
+        (!isRunningState || useToggleRun) &&
         (!isSliding || allowQuickShotDuringSlide);
 
     void Awake()
@@ -229,13 +240,18 @@ public class PlayerMovement : MonoBehaviour
         diveAction?.Disable();
         proneAction?.Disable();
 
+        runToggleActive = false;
         externalCrouchLock = false;
     }
 
     public void SetActiveView(PlayerMovementViewBase view)
     {
         if (view == null)
+        {
+            activeView = defaultTopDownView;
+            activeView?.ResetView(transform);
             return;
+        }
 
         activeView = view;
         activeView.ResetView(transform);
@@ -310,6 +326,33 @@ public class PlayerMovement : MonoBehaviour
         if (animator != null)
             animator.SetBool("IsAiming", false);
     }
+
+    private void ClearRunToggleIfInterrupted()
+    {
+        if (!useToggleRun)
+            return;
+
+        if (!clearToggleRunWhenInterrupted)
+            return;
+
+        runToggleActive = false;
+    }
+
+    public void CancelToggleRunForAction()
+    {
+        if (!useToggleRun)
+            return;
+
+        runToggleActive = false;
+    }
+
+    private bool IsRunInputActive()
+    {
+        if (useToggleRun)
+            return runToggleActive;
+
+        return runAction != null && runAction.IsPressed();
+    }
     
 
     void Update()
@@ -317,7 +360,11 @@ public class PlayerMovement : MonoBehaviour
         float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
         float dt = Time.deltaTime * speedMult;
 
-        isGrounded = controller.isGrounded;
+        bool physicsGrounded = controller.isGrounded;
+        if (physicsGrounded)
+            lastGroundedTime = Time.time;
+        isGrounded = physicsGrounded || (Time.time - lastGroundedTime < groundedBufferTime);
+
         if (isGrounded && velocity.y < 0f)
             velocity.y = -0.5f;
 
@@ -345,25 +392,34 @@ public class PlayerMovement : MonoBehaviour
 
         Vector2 moveInput = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
         bool runHeld = runAction != null && runAction.IsPressed();
+        bool runPressedThisFrame = !externalMovementLock &&
+                                   !externalMoveInputLock &&
+                                   !externalCrouchLock &&
+                                   !recoveryLocked &&
+                                   runAction != null &&
+                                   runAction.WasPressedThisFrame();
 
         WeaponAmmoSettings currentAmmoSettings = GetCurrentAmmoSettings();
         bool isReloadingNow = currentAmmoSettings != null && currentAmmoSettings.IsReloading;
 
-        if (externalMovementLock || recoveryLocked)
+        if (externalMovementLock || externalMoveInputLock || recoveryLocked)
         {
             moveInput = Vector2.zero;
             runHeld = false;
+            ClearRunToggleIfInterrupted();
         }
 
         if (externalCrouchLock)
         {
             ApplyExternalCrouchLockState();
             runHeld = false;
+            ClearRunToggleIfInterrupted();
         }
 
         if (isReloadingNow)
         {
             runHeld = false;
+            ClearRunToggleIfInterrupted();
             CancelAimAndRequireRepress();
         }
 
@@ -383,7 +439,16 @@ public class PlayerMovement : MonoBehaviour
         bool rawAimHeld = viewFrame.RawAimHeld;
         bool aimPressedThisFrame = viewFrame.AimPressedThisFrame;
 
+        if (useToggleRun && runPressedThisFrame)
+            runToggleActive = !runToggleActive;
+
+        if (useToggleRun && cancelToggleRunWhenAiming && (rawAimHeld || aimPressedThisFrame))
+            runToggleActive = false;
+
+        bool runInputActive = useToggleRun ? runToggleActive : runHeld;
+
         bool divePressed = !externalMovementLock &&
+                           !externalMoveInputLock &&
                            !externalCrouchLock &&
                            !recoveryLocked &&
                            diveAction != null &&
@@ -394,6 +459,7 @@ public class PlayerMovement : MonoBehaviour
         if (divePressed && isGrounded && !isDiving && !isSliding && !isProne && canDive)
         {
             CancelAimAndRequireRepress();
+            ClearRunToggleIfInterrupted();
             rawAimHeld = false;
             aimPressedThisFrame = false;
             StartDive(moveDirWorld);
@@ -403,20 +469,16 @@ public class PlayerMovement : MonoBehaviour
         }
 
         bool runRequested = !externalMovementLock &&
+                            !externalMoveInputLock &&
                             !externalCrouchLock &&
                             !recoveryLocked &&
-                            runHeld &&
+                            runInputActive &&
                             wantsToMove &&
                             isGrounded &&
                             !proneHoldInProgress;
 
-        bool runPressedThisFrame = !externalMovementLock &&
-                                   !externalCrouchLock &&
-                                   !recoveryLocked &&
-                                   runAction != null &&
-                                   runAction.WasPressedThisFrame();
-
         bool canSlideNow = !externalMovementLock &&
+                           !externalMoveInputLock &&
                            !externalCrouchLock &&
                            !recoveryLocked &&
                            isGrounded &&
@@ -469,10 +531,14 @@ public class PlayerMovement : MonoBehaviour
             {
                 isProne = false;
                 isCrouching = true;
+                ClearRunToggleIfInterrupted();
             }
             else
             {
                 isCrouching = !isCrouching;
+
+                if (isCrouching)
+                    ClearRunToggleIfInterrupted();
             }
         }
 
@@ -665,35 +731,21 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 delta = Vector3.zero;
 
-        bool isFpsView = activeView != null && activeView.DisablesRootMotionLocomotion;
-        bool fpsNoAimMode = isFpsView && !isAiming;
-
         if (useRootMotionLocomotion && hasMoveInput && !recoveryLocked)
         {
             float speedMult = Mathf.Max(0.01f, externalSpeedMultiplier);
             if (animator.updateMode == AnimatorUpdateMode.UnscaledTime)
                 speedMult = 1f;
 
-            if (fpsNoAimMode)
-            {
-                if (cachedMoveDirWorld.sqrMagnitude > 0.0001f)
-                {
-                    float speed = isRunningState ? runSpeed :
-                                  isProne        ? proneSpeed :
-                                  isCrouching    ? crouchSpeed :
-                                                   walkSpeed;
-                    delta = cachedMoveDirWorld.normalized * speed * rootMotionScale * speedMult * Time.deltaTime;
-                }
-            }
-            else
-            {
-                float rootSpeed = animator.deltaPosition.magnitude;
+            float rootSpeed = animator.deltaPosition.magnitude;
 
-                if (rootSpeed > 0.00001f && cachedMoveDirWorld.sqrMagnitude > 0.0001f)
-                    delta = cachedMoveDirWorld.normalized * rootSpeed * rootMotionScale * speedMult;
-                else if (!isFpsView)
-                    delta = animator.deltaPosition * rootMotionScale * speedMult;
-            }
+            if (!isRunningState)
+                rootSpeed = Mathf.Min(rootSpeed, walkSpeed * Time.deltaTime);
+
+            if (rootSpeed > 0.00001f && cachedMoveDirWorld.sqrMagnitude > 0.0001f)
+                delta = cachedMoveDirWorld.normalized * rootSpeed * rootMotionScale * speedMult;
+            else
+                delta = animator.deltaPosition * rootMotionScale * speedMult;
 
             delta.y = 0f;
         }
@@ -800,9 +852,7 @@ public class PlayerMovement : MonoBehaviour
 
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
         bool wantsToMove = moveInput.sqrMagnitude > 0.01f;
-        bool runHeld = runAction.IsPressed();
-
-        return runHeld && wantsToMove;
+        return IsRunInputActive() && wantsToMove;
     }
 
     void StartDive(Vector3 moveDirWorld)
@@ -897,6 +947,8 @@ public class PlayerMovement : MonoBehaviour
 
     void CancelDiveIntoAim()
     {
+        CancelToggleRunForAction();
+
         isDiving = false;
         isProne = false;
         isCrouching = false;
@@ -1009,6 +1061,9 @@ public class PlayerMovement : MonoBehaviour
             bool rawAimHeld = viewFrame.RawAimHeld;
             bool aimPressedThisFrame = viewFrame.AimPressedThisFrame;
 
+            if (useToggleRun && cancelToggleRunWhenAiming && (rawAimHeld || aimPressedThisFrame))
+                runToggleActive = false;
+
             isAiming = allowAimDuringSlide && rawAimHeld;
 
             if (isAiming && viewFrame.FacingDir.sqrMagnitude > 0.0001f)
@@ -1096,13 +1151,15 @@ public class PlayerMovement : MonoBehaviour
 
         Vector2 moveInput = moveAction.ReadValue<Vector2>();
         bool wantsToMove = moveInput.sqrMagnitude > 0.01f;
-        bool runHeld = runAction.IsPressed();
+        bool runHeld = IsRunInputActive();
 
         slideExitRequestedRun = wantsToMove && runHeld;
     }
 
     void CancelSlideIntoAim()
     {
+        CancelToggleRunForAction();
+
         isSliding = false;
         isProne = false;
         isCrouching = false;

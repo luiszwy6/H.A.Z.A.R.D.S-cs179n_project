@@ -455,8 +455,24 @@ public class SG_ShootSettings : MonoBehaviour
         if (externalShootLock)
             return;
 
-        if (playerMovement != null && !playerMovement.CanShootNow)
-            return;
+        bool realAimHeldNow = aimSettings != null && aimSettings.IsAimInputHeld;
+        bool isQuickShot = !realAimHeldNow && quickShotSessionActive && !quickShotRequiresRelease;
+        bool isAimingShot = !isQuickShot;
+
+        if (playerMovement != null)
+        {
+            if (isQuickShot)
+            {
+                if (!playerMovement.CanQuickShotNow)
+                    return;
+                playerMovement.CancelToggleRunForAction();
+            }
+            else
+            {
+                if (!playerMovement.CanShootNow)
+                    return;
+            }
+        }
 
         if (WeaponAmmoSettings != null)
         {
@@ -472,10 +488,6 @@ public class SG_ShootSettings : MonoBehaviour
             if (!CanConsumeRequiredAmmo())
                 return;
         }
-
-        bool realAimHeldNow = aimSettings != null && aimSettings.IsAimInputHeld;
-        bool isQuickShot = !realAimHeldNow && quickShotSessionActive && !quickShotRequiresRelease;
-        bool isAimingShot = !isQuickShot;
 
         if (isQuickShot && !allowQuickShot)
             return;

@@ -102,6 +102,10 @@ public class PlayerFpsView : PlayerMovementViewBase
 
     private void OnEnable()
     {
+        PlayerMovement pm = GetComponentInParent<PlayerMovement>(true);
+        if (pm != null)
+            pm.SetActiveView(this);
+
         CacheInputActions();
         InitializeCameraAngles();
         ApplyCameraTargetTransform();
@@ -115,6 +119,10 @@ public class PlayerFpsView : PlayerMovementViewBase
 
     private void OnDisable()
     {
+        PlayerMovement pm = GetComponentInParent<PlayerMovement>(true);
+        if (pm != null)
+            pm.SetActiveView(null);
+
         LookInput = Vector2.zero;
         IsAimHeld = false;
         AimPressedThisFrame = false;

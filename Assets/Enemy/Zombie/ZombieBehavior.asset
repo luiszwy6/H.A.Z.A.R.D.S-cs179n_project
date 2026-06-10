@@ -33,7 +33,7 @@ MonoBehaviour:
         BlackboardGroupReferences: []
         Root:
           rid: 3863247391158436650
-        m_VersionTimestamp: 639158999350556296
+        m_VersionTimestamp: 639166531291730883
     - rid: 3863247388705554907
       type: {class: BlackboardReference, ns: Unity.Behavior, asm: Unity.Behavior}
       data:
@@ -328,6 +328,8 @@ MonoBehaviour:
           rid: 3863247388705555276
         WanderRadius:
           rid: 3863247388705555280
+        IsInRangeOfPlayer:
+          rid: -2
         minWaitTime: 0.5
         maxWaitTime: 2
         stopDistance: 0.5
@@ -398,7 +400,7 @@ MonoBehaviour:
   - rid: 3863247391158436552
   - rid: 3863247391158436573
   - rid: 3863247391158436627
-  m_VersionTimestamp: 639158999350556296
+  m_VersionTimestamp: 639166531291730883
   m_SerializedVersion: 2
   m_DebugInfo: {fileID: 9209005978137705531}
   m_RuntimeGraph: {fileID: -3003792436705698023}
@@ -511,6 +513,11 @@ MonoBehaviour:
     - Name: WanderRadius
       Type:
         m_SerializableType: System.Single, mscorlib, Version=4.0.0.0, Culture=neutral,
+          PublicKeyToken=b77a5c561934e089
+      Tooltip: 
+    - Name: IsInRangeOfPlayer
+      Type:
+        m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
           PublicKeyToken=b77a5c561934e089
       Tooltip: 
     NamedChildren: []
@@ -1138,6 +1145,7 @@ MonoBehaviour:
         m_FieldValues:
         - rid: 3863247391158436529
         - rid: 3863247391158436530
+        - rid: 3863247577141740514
     - rid: 3863247391158436527
       type: {class: PortModel, ns: Unity.Behavior.GraphFramework, asm: Unity.Behavior.GraphFramework}
       data:
@@ -1412,6 +1420,25 @@ MonoBehaviour:
           rid: 3863247391158436627
         m_Connections:
         - rid: 3863247391158436574
+    - rid: 3863247577141740514
+      type: {class: BehaviorGraphNodeModel/FieldModel, ns: Unity.Behavior, asm: Unity.Behavior.Authoring}
+      data:
+        FieldName: IsInRangeOfPlayer
+        Type:
+          m_SerializableType: System.Boolean, mscorlib, Version=4.0.0.0, Culture=neutral,
+            PublicKeyToken=b77a5c561934e089
+        LocalValue:
+          rid: 3863247577141740515
+        LinkedVariable:
+          rid: -2
+    - rid: 3863247577141740515
+      type: {class: 'BlackboardVariable`1[[System.Boolean, mscorlib]]', ns: Unity.Behavior, asm: Unity.Behavior}
+      data:
+        GUID:
+          m_Value0: 0
+          m_Value1: 0
+        Name: 
+        m_Value: 0
 --- !u!114 &3490509340293036127
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -1425,8 +1452,8 @@ MonoBehaviour:
   m_Name: ZombieBehavior Blackboard
   m_EditorClassIdentifier: Unity.Behavior.Authoring::Unity.Behavior.BehaviorBlackboardAuthoringAsset
   AssetID:
-    m_Value0: 0
-    m_Value1: 0
+    m_Value0: 14136178692734137650
+    m_Value1: 14540511427806096922
   m_Variables:
   - rid: 3863247388705554913
   - rid: 3863247388705554995

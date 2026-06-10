@@ -16,6 +16,7 @@ public partial class ZombieWanderAction : Action
 {
     [SerializeReference] public BlackboardVariable<GameObject> Self;
     [SerializeReference] public BlackboardVariable<float> WanderRadius;
+    [SerializeReference] public BlackboardVariable<bool> IsInRangeOfPlayer;
 
     [Header("Wait")]
     [SerializeField] private float minWaitTime = 0.5f;
@@ -50,6 +51,9 @@ public partial class ZombieWanderAction : Action
 
     protected override Status OnUpdate()
     {
+        if (IsInRangeOfPlayer != null && IsInRangeOfPlayer.Value)
+            return Status.Failure;
+
         if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return Status.Failure;
 
@@ -73,6 +77,7 @@ public partial class ZombieWanderAction : Action
         if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             agent.isStopped = true;
+            agent.velocity  = Vector3.zero;
             agent.ResetPath();
         }
     }
@@ -114,6 +119,7 @@ public partial class ZombieWanderAction : Action
         if (distance <= stopDistance || (!agent.hasPath && !agent.pathPending))
         {
             agent.isStopped = true;
+            agent.velocity  = Vector3.zero;
             agent.ResetPath();
 
             float wait = UnityEngine.Random.Range(minWaitTime, maxWaitTime);
@@ -127,7 +133,7 @@ public partial class ZombieWanderAction : Action
     private Status TickWaiting()
     {
         if (Time.time >= waitEndTime)
-            state = WanderState.PickingPoint;
+            return Status.Success;
 
         return Status.Running;
     }

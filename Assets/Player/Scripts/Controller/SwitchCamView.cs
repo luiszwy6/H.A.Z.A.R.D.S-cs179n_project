@@ -46,6 +46,10 @@ public class SwitchCamView : MonoBehaviour
     [SerializeField] private GameObject tpsCrosshairUI;
     [SerializeField] private GameObject fpsCrosshairUI;
 
+    [Header("Sniper Aim UI")]
+    [SerializeField] private GameObject sniperAimUI;
+    [SerializeField] private bool hideTpsUIWhenSniperActive = true;
+
     [Header("Optional Top Down")]
     [SerializeField] private PlayerAimSettings topDownAimSettings;
     [SerializeField] private PlayerCrossHairSettings[] topDownCrosshairs;
@@ -176,8 +180,6 @@ public class SwitchCamView : MonoBehaviour
     {
         if (currentMode == CameraViewMode.TopDown)
             SetViewMode(CameraViewMode.ThirdPerson, true);
-        else if (currentMode == CameraViewMode.ThirdPerson)
-            SetViewMode(CameraViewMode.FirstPerson, true);
         else
             SetViewMode(CameraViewMode.TopDown, true);
     }
@@ -202,7 +204,7 @@ public class SwitchCamView : MonoBehaviour
         SetViewMode(mode, true);
     }
 
-    private void SetViewMode(CameraViewMode mode, bool cancelRuntimeState)
+    public void SetViewMode(CameraViewMode mode, bool cancelRuntimeState)
     {
         bool modeChanged = currentMode != mode;
 
@@ -281,6 +283,9 @@ public class SwitchCamView : MonoBehaviour
 
         if (topDownAimSettings != null)
             topDownAimSettings.SetExternalAimOverride(false);
+
+        if (!tpsActive)
+            HideSniperAimUI();
 
         SetTopDownCrosshairsVisible(topDownActive);
         ApplyCanvasCrosshairUI(topDownActive, tpsActive, fpsActive);
@@ -372,6 +377,19 @@ public class SwitchCamView : MonoBehaviour
             animator.SetBool(parameterHash, value);
             return;
         }
+    }
+
+    public void SetSniperAimUI(bool active)
+    {
+        SetCrosshairUIActive(sniperAimUI, active);
+
+        if (hideTpsUIWhenSniperActive)
+            SetCrosshairUIActive(tpsCrosshairUI, !active);
+    }
+
+    private void HideSniperAimUI()
+    {
+        SetCrosshairUIActive(sniperAimUI, false);
     }
 
     private void ApplyViewModels(bool fpsActive)

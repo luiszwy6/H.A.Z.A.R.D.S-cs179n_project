@@ -91,6 +91,8 @@ public class NightVisionToggle : MonoBehaviour
     {
         volume.profile = enabledNV ? nightVisionProfile : normalProfile;
 
+        NightVisionEvents.SetActive(enabledNV);
+
         if (nvDirectionalLight != null)
             nvDirectionalLight.enabled = enabledNV;
 

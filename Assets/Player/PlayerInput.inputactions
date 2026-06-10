@@ -257,6 +257,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Observe",
+                    "type": "Button",
+                    "id": "d4f3b6dc-023b-4730-9df2-2a5d60bdd7f7",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -785,6 +794,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "SpecialAbility",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2d2effd8-2457-4950-a649-21e566971ace",
+                    "path": "<Keyboard>/backquote",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Observe",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

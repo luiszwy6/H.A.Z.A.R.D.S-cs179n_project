@@ -373,12 +373,10 @@ public class EnemySensor : MonoBehaviour
 
         if (!damageRevealIgnoresInvisibility)
         {
-            if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != revealTarget.root)
-            {
-                cachedPlayerStatus = revealTarget.GetComponentInParent<PlayerStatus>();
-                if (cachedPlayerStatus == null)
-                    cachedPlayerStatus = revealTarget.GetComponentInChildren<PlayerStatus>();
-            }
+            Transform root = revealTarget.root;
+
+            if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != root)
+                cachedPlayerStatus = root.GetComponentInChildren<PlayerStatus>(true);
 
             if (cachedPlayerStatus != null && cachedPlayerStatus.IsInvisible)
                 return;
@@ -493,12 +491,10 @@ public class EnemySensor : MonoBehaviour
         if (target == null)
             return false;
 
-        if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != target.root)
-        {
-            cachedPlayerStatus = target.GetComponentInParent<PlayerStatus>();
-            if (cachedPlayerStatus == null)
-                cachedPlayerStatus = target.GetComponentInChildren<PlayerStatus>();
-        }
+        Transform root = target.root;
+
+        if (cachedPlayerStatus == null || cachedPlayerStatus.transform.root != root)
+            cachedPlayerStatus = root.GetComponentInChildren<PlayerStatus>(true);
 
         return cachedPlayerStatus != null && cachedPlayerStatus.IsInvisible;
     }

@@ -24,11 +24,15 @@ public class ZombieGenerator : MonoBehaviour
     [Min(0f)] [SerializeField] private float initialDelay = 5f;
     [Min(1f)] [SerializeField] private float spawnInterval = 30f;
 
+    [Header("Limit")]
+    [Min(0)] [SerializeField] private int maxTotalZombies = 0; // 0 = unlimited
+
     [Header("Spawn Area")]
     [Min(0f)] [SerializeField] private float spawnRadius = 1f;
 
     private bool isActive;
     private Coroutine spawnRoutine;
+    private int totalSpawned;
 
     private void Awake()
     {
@@ -62,6 +66,7 @@ public class ZombieGenerator : MonoBehaviour
             return;
 
         isActive = true;
+        totalSpawned = 0;
 
         if (spawnRoutine != null)
             StopCoroutine(spawnRoutine);
@@ -104,10 +109,17 @@ public class ZombieGenerator : MonoBehaviour
 
             for (int i = 0; i < sp.countPerSpawn; i++)
             {
+                if (maxTotalZombies > 0 && totalSpawned >= maxTotalZombies)
+                {
+                    StopGenerating();
+                    return;
+                }
+
                 Vector2 circle = Random.insideUnitCircle * spawnRadius;
                 Vector3 offset = new Vector3(circle.x, 0f, circle.y);
 
                 Instantiate(zombiePrefab, sp.point.position + offset, Quaternion.identity);
+                totalSpawned++;
             }
         }
     }

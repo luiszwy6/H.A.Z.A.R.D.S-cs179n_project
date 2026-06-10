@@ -346,6 +346,7 @@ public class ARShootSettings : MonoBehaviour
                     StopContinuousShootingState();
                     return;
                 }
+                playerMovement.CancelToggleRunForAction();
             }
             else
             {

@@ -241,6 +241,9 @@ public class SRShootSettings : MonoBehaviour
         if (IsInShootCooldown())
             return;
 
+        if (playerMovement != null)
+            playerMovement.CancelToggleRunForAction();
+
         quickShotSessionActive = true;
         quickShotRequiresRelease = false;
 
@@ -874,7 +877,7 @@ public class SRShootSettings : MonoBehaviour
             return;
 
         appliedAimMovementLock = locked;
-        playerMovement.externalMovementLock = locked;
+        playerMovement.externalMoveInputLock = locked;
 
         if (logAimMovementLock)
         {

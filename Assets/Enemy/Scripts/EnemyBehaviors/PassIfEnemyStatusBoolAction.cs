@@ -37,6 +37,8 @@ public partial class PassIfEnemyStatusBoolAction : Action
     [SerializeReference] public BlackboardVariable<EnemyStatusBoolCheck> StatusCheck;
     [SerializeReference] public BlackboardVariable<bool> InvertResult;
 
+    [SerializeReference] public BlackboardVariable<bool> ReturnRunningWhenPassing;
+
     [SerializeField] private bool debugLogResult = false;
 
     protected override Status OnUpdate()
@@ -60,7 +62,12 @@ public partial class PassIfEnemyStatusBoolAction : Action
             );
         }
 
-        return result ? Status.Success : Status.Failure;
+        if (!result)
+            return Status.Failure;
+
+        return (ReturnRunningWhenPassing != null && ReturnRunningWhenPassing.Value)
+            ? Status.Running
+            : Status.Success;
     }
 
     private EnemyStatus ResolveEnemyStatus()
