@@ -1,0 +1,755 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2057739182561751761
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6812835179023349945}
+  - component: {fileID: 4497342418662637692}
+  - component: {fileID: 3420431978960885988}
+  - component: {fileID: 5541902957527850913}
+  m_Layer: 0
+  m_Name: SfxManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6812835179023349945
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057739182561751761}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4957051956110746243}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4497342418662637692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057739182561751761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00985f87236a48243b6ae430371f8841, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BulletTimeSound
+  bulletTimeAbility: {fileID: 0}
+  enterClip: {fileID: 8300000, guid: 4cb9bcf4196961c4c9d9538114305d34, type: 3}
+  exitClip: {fileID: 8300000, guid: f168b79649ef33b448d243dfcea07ff5, type: 3}
+  enterVolume: 0.6
+  exitVolume: 0.6
+--- !u!114 &3420431978960885988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057739182561751761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2791212ad33369e40950e7479437e524, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpecialAbilitySound
+  arSpecialAbility: {fileID: 0}
+  sgSpecialAbility: {fileID: 0}
+  srSpecialAbility: {fileID: 0}
+  playEnterClip: 1
+  enterClip: {fileID: 8300000, guid: fb8d58cb95e748a4b8eead06066fb599, type: 3}
+  playExitClip: 0
+  exitClip: {fileID: 0}
+  enterVolume: 0.6
+  exitVolume: 0.6
+--- !u!82 &5541902957527850913
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2057739182561751761}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!1 &2568972243697142548
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3931637442433597037}
+  m_Layer: 0
+  m_Name: MenuManger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3931637442433597037
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2568972243697142548}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4957051956110746243}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3720691261568653315
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7623306612700530079}
+  - component: {fileID: 4648956138776888297}
+  - component: {fileID: 3329576510346422869}
+  m_Layer: 0
+  m_Name: MusicManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7623306612700530079
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3720691261568653315}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4957051956110746243}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4648956138776888297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3720691261568653315}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5428e67f1446ff4ebbcbcf9e552dda9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MusicManager
+  squadGenerator: {fileID: 4442368226043357081}
+  explorationMusic: {fileID: 8300000, guid: 5b11d813bf2eff145b206828e8051dca, type: 3}
+  combatMusic: {fileID: 8300000, guid: 0e01dff770871a044b615e862d058ed6, type: 3}
+  bulletTimeMusic: {fileID: 8300000, guid: 938c23656d1db444cb232c5ea961c867, type: 3}
+  specialAbilityMusic: {fileID: 8300000, guid: 633f949c41fa3da43b1e1ca5b0571347, type: 3}
+  waveClearMusic: {fileID: 8300000, guid: 7894416b8da3a3b49a4549a7a213ebd9, type: 3}
+  bossBattleMusic: {fileID: 8300000, guid: 125756004c47ee14583269e900409742, type: 3}
+  bulletTimeAbility: {fileID: 0}
+  arSpecialAbility: {fileID: 0}
+  sgSpecialAbility: {fileID: 0}
+  srSpecialAbility: {fileID: 0}
+  explorationVolume: 0.3
+  combatVolume: 0.3
+  bulletTimeVolume: 0.3
+  specialAbilityVolume: 0.3
+  waveClearVolume: 0.35
+  bossBattleVolume: 0.3
+  crossfadeDuration: 3
+  transitionClip: {fileID: 8300000, guid: 601303663d090a044b661099898bc3b6, type: 3}
+  transitionVolume: 0.3
+--- !u!82 &3329576510346422869
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3720691261568653315}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 1
+  m_Volume: 0.3
+  m_Pitch: 1
+  Loop: 1
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!1 &4198045134655083226
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4617653295554737088}
+  - component: {fileID: 5802451766097498475}
+  - component: {fileID: 1292886993888873875}
+  - component: {fileID: 1622535517100929990}
+  - component: {fileID: 6315493780409860051}
+  - component: {fileID: 6273192330448493908}
+  - component: {fileID: 7957006612572518242}
+  - component: {fileID: 623535462899330702}
+  m_Layer: 0
+  m_Name: ViewManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4617653295554737088
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4957051956110746243}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5802451766097498475
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 612d890a118e8824eb75064aa1d5e149, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowAmmo
+  playerWeaponSlots: {fileID: 0}
+  fallbackAmmoSettings: {fileID: 0}
+  showAmmo: 1
+  offsetFromBottomLeft: {x: 18, y: 18}
+  boxWidth: 220
+  boxHeight: 64
+  fontSize: 22
+  title: Ammo
+--- !u!114 &1292886993888873875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d51091de95a08b54a8ba7d1dc39c47a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowPlayerHealth
+  playerHealth: {fileID: 0}
+  show: 1
+  offsetFromBottomLeft: {x: 18, y: 82}
+  boxWidth: 220
+  boxHeight: 64
+  fontSize: 22
+  title: Health
+--- !u!114 &1622535517100929990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06f03e23e814de740bd0cb1104e0d855, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowBulletTime
+  bulletTimeAbility: {fileID: 0}
+  showBulletTime: 1
+  offsetFromBottomLeft: {x: 250, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Bullet Time
+--- !u!114 &6315493780409860051
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0c1bed3da1f62124f8c658bd4149ecb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowCamoCooldown
+  camoAbility: {fileID: 0}
+  showCamo: 1
+  offsetFromBottomLeft: {x: 500, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Camouflage
+--- !u!114 &6273192330448493908
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a6c9a7f01cf5a14db9be54272b05e74, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowSpecialAbility
+  killCount: {fileID: 0}
+  arAbility: {fileID: 0}
+  sgAbility: {fileID: 0}
+  srAbility: {fileID: 0}
+  show: 1
+  offsetFromBottomLeft: {x: 750, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Special
+--- !u!114 &7957006612572518242
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72845847541daea4793762fb8071a507, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShowGrenade
+  grenadeSlots: {fileID: 0}
+  show: 1
+  offsetFromBottomLeft: {x: 1000, y: 18}
+  boxWidth: 240
+  boxHeight: 64
+  fontSize: 22
+  title: Grenade
+--- !u!114 &623535462899330702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4198045134655083226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76500692a0fbaca498f09d487b413146, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpecialAbilityVolumeManager
+  arSpecialAbility: {fileID: 0}
+  sgSpecialAbility: {fileID: 0}
+  srSpecialAbility: {fileID: 0}
+  bulletTimeAbility: {fileID: 0}
+  postProcessVolume: {fileID: 0}
+  normalProfile: {fileID: 11400000, guid: 8ad2449a7fc8ed04285da66e49122d11, type: 2}
+  specialAbilityProfile: {fileID: 11400000, guid: 6419040260e7e2a448fdd48c68bd6752, type: 2}
+  bulletTimeProfile: {fileID: 11400000, guid: 190cca3e32ad16e49bfd1747ad5598c4, type: 2}
+--- !u!1 &6403712761709747276
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4957051956110746243}
+  - component: {fileID: 4442368226043357081}
+  - component: {fileID: 8787041473108448494}
+  - component: {fileID: 8204293830436542280}
+  m_Layer: 0
+  m_Name: GameManager 1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4957051956110746243
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6403712761709747276}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 75.75, y: 0.024, z: 61.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 7623306612700530079}
+  - {fileID: 6812835179023349945}
+  - {fileID: 4617653295554737088}
+  - {fileID: 3931637442433597037}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4442368226043357081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6403712761709747276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be1d7c3a97526ce4196b44e59afdf81c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemySquadGenerator
+  squadManager: {fileID: 0}
+  squadConfigs:
+  - squadName: General Squad
+    entries:
+    - enemyPrototype: {fileID: 0}
+      enemyType: 0
+      count: 1
+    - enemyPrototype: {fileID: 0}
+      enemyType: 2
+      count: 1
+    - enemyPrototype: {fileID: 0}
+      enemyType: 1
+      count: 2
+    - enemyPrototype: {fileID: 0}
+      enemyType: 3
+      count: 1
+  spawnPoints:
+  - {fileID: 0}
+  spawnRadius: 2
+  waves:
+  - waveName: first wave
+    delayAfterPreviousClear: 5
+    groups:
+    - groupName: 1
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+  - waveName: second wave
+    delayAfterPreviousClear: 30
+    groups:
+    - groupName: 1
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 2
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+  - waveName: Third Wave
+    delayAfterPreviousClear: 30
+    groups:
+    - groupName: 1
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 2
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 3
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+  - waveName: Fourth Wave
+    delayAfterPreviousClear: 30
+    groups:
+    - groupName: 1
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 2
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 3
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+  - waveName: Fifth Wave
+    delayAfterPreviousClear: 30
+    groups:
+    - groupName: 1
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 2
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 3
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 4
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+    - groupName: 4
+      configIndex: 0
+      spawnCount: 1
+      spawnPoints:
+      - {fileID: 0}
+  stopOnAllDiedThisRound: 1
+  stopOnAllClear: 0
+  waitForRoundClear: 1
+  spawnCountOnTrigger: 1
+  onAllDiedThisRound:
+    m_PersistentCalls:
+      m_Calls: []
+  onAllClear:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &8787041473108448494
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6403712761709747276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f45a6f733fb6ba49bf35dfb6ae8b5ae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieGenerator
+  squadGenerator: {fileID: 4442368226043357081}
+  zombiePrefab: {fileID: 0}
+  spawnPoints:
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  initialDelay: 0
+  spawnInterval: 90
+  maxTotalZombies: 150
+  spawnRadius: 1
+--- !u!114 &8204293830436542280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6403712761709747276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db6e51d3c2822e6408c750f76daf8bd7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossRoomZombieGenerator
+  door: {fileID: 0}
+  zombiePrefab: {fileID: 0}
+  spawnPoints:
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  - point: {fileID: 0}
+    countPerSpawn: 1
+  initialDelay: 3
+  spawnInterval: 30
+  maxTotalZombies: 30
+  spawnRadius: 1

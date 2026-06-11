@@ -11,7 +11,7 @@ public class PlayerTopDownView : PlayerMovementViewBase
     [SerializeField] private Transform movementCameraTransform;
 
     public override bool IsViewAiming => aimSettings != null && aimSettings.IsAiming;
-    public override bool HasViewAimPoint => aimSettings != null && aimSettings.IsAiming;
+    public override bool HasViewAimPoint => aimSettings != null && (aimSettings.IsAiming || aimSettings.AimWorldDir.sqrMagnitude > 0.001f);
     public override Vector3 ViewAimPoint => aimSettings != null ? aimSettings.AimPointClamped : transform.position;
     public override Vector3 ViewAimWorldDir => aimSettings != null ? aimSettings.AimWorldDir : transform.forward;
 
@@ -36,7 +36,7 @@ public class PlayerTopDownView : PlayerMovementViewBase
         if (aimSettings == null)
             return false;
 
-        if (!aimSettings.IsAiming)
+        if (!aimSettings.IsAiming && aimSettings.AimWorldDir.sqrMagnitude <= 0.001f)
             return false;
 
         aimPoint = aimSettings.AimPointClamped;

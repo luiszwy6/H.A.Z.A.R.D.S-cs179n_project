@@ -252,9 +252,13 @@ public class EnemySquadGenerator : MonoBehaviour
 
     // ── Internals ────────────────────────────────────────────────
 
-    private void HandleAnyEnemyDied(EnemyHealth _)
+    private void HandleAnyEnemyDied(EnemyHealth health)
     {
         if (allClearFired)
+            return;
+
+        // Bosses marked with BossExcludeFromWaveCount don't trigger wave-clear checks.
+        if (health != null && health.GetComponent<BossExcludeFromWaveCount>() != null)
             return;
 
         CheckConditions();

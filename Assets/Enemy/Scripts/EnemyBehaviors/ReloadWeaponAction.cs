@@ -83,6 +83,8 @@ public partial class ReloadWeaponAction : Action
         if (!startedReload)
             return Status.Failure;
 
+        animatorDriver?.SetReloading(true);
+
         return Status.Running;
     }
 
@@ -118,6 +120,7 @@ public partial class ReloadWeaponAction : Action
 
     protected override void OnEnd()
     {
+        animatorDriver?.SetReloading(false);
     }
 
     private void ApplyMovementRule()

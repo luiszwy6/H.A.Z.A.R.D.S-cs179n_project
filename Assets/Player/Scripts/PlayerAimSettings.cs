@@ -225,7 +225,7 @@ public void CancelAimAndRequireRepress()
             HasMouseAimPoint = activeCrosshairSettings.HasMouseAimPoint;
             MouseAimPoint = activeCrosshairSettings.MouseAimPoint;
 
-            if (IsAiming && AimWorldDir.sqrMagnitude > 0.0001f)
+            if (AimWorldDir.sqrMagnitude > 0.0001f)
                 return AimWorldDir;
 
             return moveDirWorld;

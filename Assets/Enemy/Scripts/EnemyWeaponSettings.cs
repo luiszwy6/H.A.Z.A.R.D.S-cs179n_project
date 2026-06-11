@@ -292,6 +292,14 @@ public class EnemyWeaponSettings : MonoBehaviour
         SetAnimatorKeepReloadingBool(false);
     }
 
+    public void SetInfiniteAmmo()
+    {
+        CancelReload();
+        usesAmmoAndReload    = false;
+        magazineSize         = 99999;
+        currentAmmoInMagazine = 99999;
+    }
+
     private IEnumerator MagazineReloadRoutine()
     {
         BeginReloadProcess(keepReloadingInAnimator: false);

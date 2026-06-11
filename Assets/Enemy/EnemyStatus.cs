@@ -17,6 +17,9 @@ public class EnemyStatus : MonoBehaviour
     [SerializeField] private bool isSmokeBlockingVision;
     [SerializeField] private bool isFlashBangStun;
 
+    [Header("Boss")]
+    [SerializeField] private bool is2ndPhase;
+
     [Header("Tactical")]
     [SerializeField] private bool isFlanking;
     [SerializeField] private bool isCoveringTeammate;
@@ -42,6 +45,8 @@ public class EnemyStatus : MonoBehaviour
     public bool CanSeeTarget => canSeeTarget;
     public bool IsSmokeBlockingVision => isSmokeBlockingVision;
     public bool IsFlashBangStun => isFlashBangStun;
+    public bool Is2ndPhase => is2ndPhase;
+
     public bool IsFlanking => isFlanking;
     public bool IsCoveringTeammate => isCoveringTeammate;
     public bool IsEscapingFromGrenade => isEscapingFromGrenade;
@@ -99,6 +104,11 @@ public class EnemyStatus : MonoBehaviour
 
         if (value)
             isEscapingFromGrenade = false;
+    }
+
+    public void SetIs2ndPhase(bool value)
+    {
+        is2ndPhase = value;
     }
 
     public void SetFlanking(bool value)

@@ -15,6 +15,10 @@ public class MusicManager : MonoBehaviour
     [SerializeField] private AudioClip bulletTimeMusic;
     [SerializeField] private AudioClip specialAbilityMusic;
     [SerializeField] private AudioClip waveClearMusic;
+    [SerializeField] private AudioClip bossBattleMusic;
+    [SerializeField] private AudioClip bossBattleLoopMusic;
+    [FormerlySerializedAs("bossPhaseTwoMusic")]
+    [SerializeField] private AudioClip bossPhaseLoopMusic;
 
     [Header("Ability References")]
     [SerializeField] private BulletTimeAbility bulletTimeAbility;
@@ -29,6 +33,10 @@ public class MusicManager : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float bulletTimeVolume     = 1f;
     [Range(0f, 1f)] [SerializeField] private float specialAbilityVolume = 1f;
     [Range(0f, 1f)] [SerializeField] private float waveClearVolume      = 1f;
+    [Range(0f, 1f)] [SerializeField] private float bossBattleVolume     = 1f;
+    [Range(0f, 1f)] [SerializeField] private float bossBattleLoopVolume = 1f;
+    [FormerlySerializedAs("bossPhaseTwoVolume")]
+    [Range(0f, 1f)] [SerializeField] private float bossPhaseLoopVolume = 1f;
 
     [Header("Crossfade")]
     [Min(0f)] [SerializeField] private float crossfadeDuration = 1.5f;
@@ -40,10 +48,14 @@ public class MusicManager : MonoBehaviour
     private AudioSource bulletTimeMusicSource;
     private AudioSource specialAbilityMusicSource;
     private AudioSource waveClearMusicSource;
+    private AudioSource bossMusicSource;   // intro, plays once
+    private AudioSource bossLoopSource;    // phase 1 loop
+    private AudioSource bossPhase2MusicSource; // phase 2 loop
     private AudioSource transitionSource;
     private Coroutine crossfadeRoutine;
     private bool combatActive;
     private bool waveClearActive;
+    private bool bossActive;
 
     private void Awake()
     {
@@ -59,12 +71,15 @@ public class MusicManager : MonoBehaviour
         if (srSpecialAbility == null)
             srSpecialAbility = FindFirstSceneObject<SRSpecialAbility>();
 
-        sourceA = CreateSource(loop: true);
-        sourceB = CreateSource(loop: true);
-        bulletTimeMusicSource    = CreateSource(loop: true);
+        sourceA                   = CreateSource(loop: true);
+        sourceB                   = CreateSource(loop: true);
+        bulletTimeMusicSource     = CreateSource(loop: true);
         specialAbilityMusicSource = CreateSource(loop: true);
-        waveClearMusicSource     = CreateSource(loop: false);
-        transitionSource         = CreateSource(loop: false);
+        waveClearMusicSource      = CreateSource(loop: false);
+        bossMusicSource           = CreateSource(loop: false); // intro, one-shot
+        bossLoopSource            = CreateSource(loop: true);
+        bossPhase2MusicSource     = CreateSource(loop: true);
+        transitionSource          = CreateSource(loop: false);
     }
 
     private AudioSource CreateSource(bool loop)
@@ -104,10 +119,44 @@ public class MusicManager : MonoBehaviour
 
     private void Update()
     {
-        if (!combatActive || waveClearActive)
+        if (!combatActive || waveClearActive || bossActive)
             return;
 
         UpdateCombatLayerVolumes();
+    }
+
+    // ── Boss music ────────────────────────────────────────────────
+
+    public void StartBossMusic()
+    {
+        if (bossActive) return;
+        bossActive = true;
+        combatActive = true;
+
+        if (crossfadeRoutine != null)
+            StopCoroutine(crossfadeRoutine);
+
+        crossfadeRoutine = StartCoroutine(CrossfadeToBossRoutine());
+    }
+
+    public void StartBossPhaseTwoMusic()
+    {
+        if (bossPhaseLoopMusic == null) return;
+
+        if (crossfadeRoutine != null)
+            StopCoroutine(crossfadeRoutine);
+
+        crossfadeRoutine = StartCoroutine(CrossfadeToBossPhase2Routine());
+    }
+
+    public void PlayBossDefeatedMusic()
+    {
+        bossActive = false;
+
+        if (crossfadeRoutine != null)
+            StopCoroutine(crossfadeRoutine);
+
+        crossfadeRoutine = StartCoroutine(FadeOutBossRoutine());
     }
 
     // ── Combat start ─────────────────────────────────────────────
@@ -223,6 +272,139 @@ public class MusicManager : MonoBehaviour
             specialAbilityMusicSource.volume = useSpecialAbility ? specialAbilityVolume : 0f;
             specialAbilityMusicSource.Play();
         }
+
+        crossfadeRoutine = null;
+    }
+
+    private IEnumerator CrossfadeToBossRoutine()
+    {
+        float duration = Mathf.Max(0.01f, crossfadeDuration);
+        float elapsed  = 0f;
+
+        // ── Step 1: fade out all current music, fade in boss intro ──
+        float startA      = sourceA.volume;
+        float startB      = sourceB.volume;
+        float startBullet = bulletTimeMusicSource.volume;
+        float startSA     = specialAbilityMusicSource.volume;
+
+        if (bossBattleMusic != null)
+        {
+            bossMusicSource.clip   = bossBattleMusic;
+            bossMusicSource.volume = 0f;
+            bossMusicSource.Play();
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            sourceA.volume                   = Mathf.Lerp(startA,      0f, t);
+            sourceB.volume                   = Mathf.Lerp(startB,      0f, t);
+            bulletTimeMusicSource.volume     = Mathf.Lerp(startBullet, 0f, t);
+            specialAbilityMusicSource.volume = Mathf.Lerp(startSA,     0f, t);
+            if (bossMusicSource.isPlaying)
+                bossMusicSource.volume = Mathf.Lerp(0f, bossBattleVolume, t);
+            yield return null;
+        }
+
+        sourceA.Stop();
+        sourceB.Stop();
+        bulletTimeMusicSource.Stop();
+        specialAbilityMusicSource.Stop();
+
+        // ── Step 2: wait for intro to end, leaving room for crossfade ──
+        if (bossBattleMusic != null)
+        {
+            float waitTime = Mathf.Max(0f, bossBattleMusic.length - duration);
+            float waited   = 0f;
+            while (waited < waitTime)
+            {
+                waited += Time.unscaledDeltaTime;
+                yield return null;
+            }
+        }
+
+        // ── Step 3: crossfade intro → phase-1 loop ──
+        if (bossBattleLoopMusic != null)
+        {
+            bossLoopSource.loop   = true;
+            bossLoopSource.clip   = bossBattleLoopMusic;
+            bossLoopSource.volume = 0f;
+            bossLoopSource.Play();
+        }
+
+        float startIntroVol = bossMusicSource.volume;
+        elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            bossMusicSource.volume = Mathf.Lerp(startIntroVol, 0f, t);
+            if (bossLoopSource.isPlaying)
+                bossLoopSource.volume = Mathf.Lerp(0f, bossBattleLoopVolume, t);
+            yield return null;
+        }
+
+        bossMusicSource.Stop();
+        bossMusicSource.clip = null;
+        crossfadeRoutine = null;
+    }
+
+    private IEnumerator CrossfadeToBossPhase2Routine()
+    {
+        float duration   = Mathf.Max(0.01f, crossfadeDuration);
+        float elapsed    = 0f;
+        float startLoop  = bossLoopSource.volume;
+        float startIntro = bossMusicSource.volume; // may still be fading when phase 2 triggers
+
+        if (bossPhaseLoopMusic != null)
+        {
+            bossPhase2MusicSource.loop   = true;
+            bossPhase2MusicSource.clip   = bossPhaseLoopMusic;
+            bossPhase2MusicSource.volume = 0f;
+            bossPhase2MusicSource.Play();
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            bossLoopSource.volume        = Mathf.Lerp(startLoop,  0f, t);
+            bossMusicSource.volume       = Mathf.Lerp(startIntro, 0f, t);
+            bossPhase2MusicSource.volume = Mathf.Lerp(0f, bossPhaseLoopVolume, t);
+            yield return null;
+        }
+
+        bossLoopSource.Stop();
+        bossLoopSource.clip = null;
+        bossMusicSource.Stop();
+        bossMusicSource.clip = null;
+        crossfadeRoutine = null;
+    }
+
+    private IEnumerator FadeOutBossRoutine()
+    {
+        float duration    = Mathf.Max(0.01f, crossfadeDuration);
+        float elapsed     = 0f;
+        float startLoop   = bossLoopSource.volume;
+        float startPhase2 = bossPhase2MusicSource.volume;
+        float startIntro  = bossMusicSource.volume;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            bossLoopSource.volume        = Mathf.Lerp(startLoop,   0f, t);
+            bossPhase2MusicSource.volume = Mathf.Lerp(startPhase2, 0f, t);
+            bossMusicSource.volume       = Mathf.Lerp(startIntro,  0f, t);
+
+            yield return null;
+        }
+
+        bossLoopSource.Stop();        bossLoopSource.clip        = null;
+        bossPhase2MusicSource.Stop(); bossPhase2MusicSource.clip = null;
+        bossMusicSource.Stop();       bossMusicSource.clip       = null;
 
         crossfadeRoutine = null;
     }

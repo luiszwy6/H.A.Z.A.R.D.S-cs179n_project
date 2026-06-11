@@ -20,7 +20,8 @@ public enum EnemyStatusBoolCheck
     IsCombatStrafing,
     IsMeleeCombating,
     IsGoingToLKP,
-    IsPatrol
+    IsPatrol,
+    Is2ndPhase
 }
 
 [Serializable, GeneratePropertyBag]
@@ -131,6 +132,9 @@ public partial class PassIfEnemyStatusBoolAction : Action
 
             case EnemyStatusBoolCheck.IsPatrol:
                 return enemyStatus.IsPatrol;
+
+            case EnemyStatusBoolCheck.Is2ndPhase:
+                return enemyStatus.Is2ndPhase;
 
             case EnemyStatusBoolCheck.IsCoveringTeammate:
             default:

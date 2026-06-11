@@ -90,6 +90,8 @@ public class EnemyHealth : MonoBehaviour
     [SerializeField] private bool resetAnimatorIsDeadOnAwake = true;
     [SerializeField] private bool applyIsDeadToChildAnimators = true;
     [SerializeField] private string isDeadBoolName = "IsDead";
+    [SerializeField] private bool fireAnimatorDeadTriggerOnDeath = true;
+    [SerializeField] private string deadTriggerName = "Dead";
 
     [Header("Death Component Shutdown")]
     [SerializeField] private bool shutdownComponentsOnDeath = true;
@@ -578,6 +580,9 @@ public class EnemyHealth : MonoBehaviour
 
         if (setAnimatorIsDeadOnDeath)
             SetAnimatorIsDead(true);
+
+        if (fireAnimatorDeadTriggerOnDeath)
+            FireAnimatorDeadTrigger();
 
         if (disableHitboxesOnDeath)
             SetHitboxesEnabled(false);
@@ -1187,6 +1192,47 @@ public class EnemyHealth : MonoBehaviour
                 continue;
 
             SetAnimatorBoolIfExists(childAnimator, isDeadBoolHash, value);
+        }
+    }
+
+    private void FireAnimatorDeadTrigger()
+    {
+        if (string.IsNullOrWhiteSpace(deadTriggerName))
+            return;
+
+        int hash = Animator.StringToHash(deadTriggerName);
+
+        Animator animator = GetComponent<Animator>();
+        if (animator != null)
+            FireTriggerIfExists(animator, hash);
+
+        if (!applyIsDeadToChildAnimators)
+            return;
+
+        Animator[] childAnimators = GetComponentsInChildren<Animator>(true);
+        for (int i = 0; i < childAnimators.Length; i++)
+        {
+            if (childAnimators[i] == null || childAnimators[i] == animator)
+                continue;
+
+            FireTriggerIfExists(childAnimators[i], hash);
+        }
+    }
+
+    private void FireTriggerIfExists(Animator animator, int triggerHash)
+    {
+        if (animator == null || animator.runtimeAnimatorController == null)
+            return;
+
+        AnimatorControllerParameter[] parameters = animator.parameters;
+        for (int i = 0; i < parameters.Length; i++)
+        {
+            if (parameters[i].nameHash == triggerHash &&
+                parameters[i].type == AnimatorControllerParameterType.Trigger)
+            {
+                animator.SetTrigger(triggerHash);
+                return;
+            }
         }
     }
 

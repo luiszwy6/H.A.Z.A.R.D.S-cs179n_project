@@ -48,6 +48,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
     [SerializeField] private bool isAiming;
     [SerializeField] private bool isShooting;
     [SerializeField] private bool keepShooting;
+    [SerializeField] private bool isReloading;
 
     [Header("External Animation Overrides")]
     [SerializeField] private bool externalCrouchOverride;
@@ -64,6 +65,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
     private static readonly int IsAimingHash = Animator.StringToHash("IsAiming");
     private static readonly int IsShootingHash = Animator.StringToHash("IsShooting");
     private static readonly int KeepShootingHash = Animator.StringToHash("KeepShooting");
+    private static readonly int IsReloadingHash = Animator.StringToHash("IsReloading");
     private static readonly int ShootHash = Animator.StringToHash("Shoot");
 
     private static readonly int QuickShotHash = Animator.StringToHash("QuickShot");
@@ -241,7 +243,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         bool isCrouching = externalCrouchOverride || currentMoveMode == EnemyMoveMode.Crouch;
         bool isRunning = isMoving && currentMoveMode == EnemyMoveMode.Run;
         bool isWalking = isMoving && currentMoveMode != EnemyMoveMode.Run;
-        bool isIdle = !isMoving && !isAiming && !isShooting;
+        bool isIdle = !isMoving && !isAiming && !isShooting && !isReloading;
 
         animator.SetFloat(SpeedHash, speed, dampTime, Time.deltaTime);
         animator.SetFloat(SpeedXHash, speedX, dampTime, Time.deltaTime);
@@ -262,6 +264,7 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         animator.SetBool(IsAimingHash, isAiming);
         animator.SetBool(IsShootingHash, isShooting);
         animator.SetBool(KeepShootingHash, keepShooting);
+        animator.SetBool(IsReloadingHash, isReloading);
     }
 
     private void ForceClearPlayerOnlyParams()
@@ -308,14 +311,26 @@ public class EnemyAnimatorParameterDriver : MonoBehaviour
         animator.SetTrigger(ShootHash);
     }
 
+    public void SetReloading(bool reloading)
+    {
+        isReloading = reloading;
+
+        if (enemyStatus != null)
+            enemyStatus.SetReloading(reloading);
+    }
+
     public void ClearCombat()
     {
         isAiming = false;
         isShooting = false;
         keepShooting = false;
+        isReloading = false;
 
         if (enemyStatus != null)
+        {
             enemyStatus.SetShooting(false);
+            enemyStatus.SetReloading(false);
+        }
     }
 
     public void SetExternalCrouchOverride(bool crouching)

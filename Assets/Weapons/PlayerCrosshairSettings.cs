@@ -32,6 +32,8 @@ public class PlayerCrossHairSettings : MonoBehaviour
     [Header("Visibility")]
     public bool forceHideCrosshair = false;
     public bool hideWhenNotAiming = true;
+    [Tooltip("TopDown: always show the crosshair when using mouse scheme, even without holding Aim.")]
+    public bool alwaysShowWithMouseScheme = false;
 
     [Header("Recoil Return")]
     public float recoilReturnSpeed = 18f;
@@ -59,6 +61,7 @@ public class PlayerCrossHairSettings : MonoBehaviour
 
     private Transform lastActor;
     private bool lastIsAiming;
+    private bool cachedUsingMouseScheme;
 
     private bool hasLastScreenRay;
     private Vector3 lastScreenRayOrigin;
@@ -83,6 +86,7 @@ public class PlayerCrossHairSettings : MonoBehaviour
     {
         lastActor = actor;
         lastIsAiming = isAiming;
+        cachedUsingMouseScheme = usingMouseScheme;
 
         recoilOffsetWorld = Vector3.Lerp(
             recoilOffsetWorld,
@@ -102,6 +106,34 @@ public class PlayerCrossHairSettings : MonoBehaviour
         if (!isAiming)
         {
             AimPointClamped = actor.position;
+
+            // When alwaysShowWithMouseScheme is on, still compute the mouse world position
+            // so the physical aim point follows the cursor even without holding Aim.
+            if (alwaysShowWithMouseScheme && usingMouseScheme && aimCamera != null && Mouse.current != null)
+            {
+                Vector2 screenPos = Mouse.current.position.ReadValue();
+                Ray ray = aimCamera.ScreenPointToRay(screenPos);
+
+                if (mouseAimLayers.value != 0 &&
+                    Physics.Raycast(ray, out RaycastHit hit, mouseRayMaxDistance, mouseAimLayers, mouseRayTriggerInteraction))
+                {
+                    AimPointClamped = hit.point;
+                }
+                else if (mouseGroundLayers.value != 0 &&
+                         Physics.Raycast(ray, out RaycastHit groundHit, mouseRayMaxDistance, mouseGroundLayers, mouseRayTriggerInteraction))
+                {
+                    Vector3 gp = groundHit.point;
+                    gp.y += mouseGroundHeightOffset;
+                    AimPointClamped = gp;
+                }
+
+                // Compute AimWorldDir so the character body faces the mouse even without holding Aim.
+                Vector3 dirToMouse = AimPointClamped - actor.position;
+                dirToMouse.y = 0f;
+                if (dirToMouse.sqrMagnitude > 0.001f)
+                    AimWorldDir = dirToMouse.normalized;
+            }
+
             UpdatePivot(actor, false, Time.deltaTime);
             UpdateCrosshairVisual(false);
             return;
@@ -174,7 +206,8 @@ public class PlayerCrossHairSettings : MonoBehaviour
         if (physicalAimPoint == null)
             return;
 
-        bool visible = !forceHideCrosshair && (!hideWhenNotAiming || isAiming);
+        bool mouseOverride = alwaysShowWithMouseScheme && cachedUsingMouseScheme;
+        bool visible = !forceHideCrosshair && (mouseOverride || !hideWhenNotAiming || isAiming);
 
         if (physicalAimPoint.gameObject.activeSelf != visible)
             physicalAimPoint.gameObject.SetActive(visible);

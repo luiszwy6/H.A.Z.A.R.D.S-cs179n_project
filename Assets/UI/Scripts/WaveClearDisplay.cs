@@ -49,21 +49,26 @@ public class WaveClearDisplay : MonoBehaviour
 
     private void HandleWaveCleared(int _, float __)
     {
+        ShowWithText(displayText);
+    }
+
+    public void ShowWithText(string text, System.Action onComplete = null)
+    {
         if (waveClearText == null)
             return;
 
         if (displayRoutine != null)
             StopCoroutine(displayRoutine);
 
-        displayRoutine = StartCoroutine(DisplayRoutine());
+        displayRoutine = StartCoroutine(DisplayRoutine(text, onComplete));
     }
 
-    private IEnumerator DisplayRoutine()
+    private IEnumerator DisplayRoutine(string text, System.Action onComplete = null)
     {
-        // Fade in
+        waveClearText.text = text;
+
         yield return FadeTo(1f, fadeInDuration);
 
-        // Hold
         float held = 0f;
         while (held < visibleDuration)
         {
@@ -71,10 +76,10 @@ public class WaveClearDisplay : MonoBehaviour
             yield return null;
         }
 
-        // Fade out
         yield return FadeTo(0f, fadeOutDuration);
 
         displayRoutine = null;
+        onComplete?.Invoke();
     }
 
     private IEnumerator FadeTo(float targetAlpha, float duration)
