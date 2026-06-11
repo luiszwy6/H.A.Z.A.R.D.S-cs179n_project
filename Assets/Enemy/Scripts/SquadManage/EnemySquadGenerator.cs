@@ -162,7 +162,23 @@ public class EnemySquadGenerator : MonoBehaviour
 
     public bool IsStartingGenerate => hasSpawnedAny || waveRoutine != null;
 
+    public int CurrentWaveNumber => currentWaveIndex + 1;
+    public int TotalWaves => waves.Count;
+    public int AliveEnemiesThisWave
+    {
+        get
+        {
+            int n = 0;
+            foreach (var m in currentRoundMembers)
+                if (m != null && m.IsAlive) n++;
+            return n;
+        }
+    }
+
     public event System.Action OnStartedGenerating;
+    public event System.Action<int> OnWaveStarted;
+    public event System.Action<int, float> OnWaveCleared; // (waveNumber, nextWaveDelay)
+    public event System.Action<int> OnWaveSpawned;         // fires after delay when enemies appear
 
     public void HaltSpawning() => spawnHalted = true;
 
@@ -191,6 +207,7 @@ public class EnemySquadGenerator : MonoBehaviour
     {
         currentWaveIndex = index;
         allDiedThisRoundFired = true; // block re-entry until wave spawns
+        OnWaveStarted?.Invoke(index + 1);
 
         if (waveRoutine != null)
             StopCoroutine(waveRoutine);
@@ -202,6 +219,8 @@ public class EnemySquadGenerator : MonoBehaviour
     {
         if (wave.delayAfterPreviousClear > 0f)
             yield return new WaitForSeconds(wave.delayAfterPreviousClear);
+
+        OnWaveSpawned?.Invoke(currentWaveIndex + 1);
 
         currentRoundMembers.Clear();
         hasSpawnedAny = true;
@@ -255,10 +274,13 @@ public class EnemySquadGenerator : MonoBehaviour
 
                 if (nextWave < waves.Count)
                 {
+                    float delay = waves[nextWave].delayAfterPreviousClear;
+                    OnWaveCleared?.Invoke(currentWaveIndex + 1, delay);
                     LaunchWave(nextWave);
                 }
                 else
                 {
+                    OnWaveCleared?.Invoke(currentWaveIndex + 1, 0f);
                     allDiedThisRoundFired = true;
                     spawnHalted = true;
                     onAllDiedThisRound.Invoke();
@@ -266,6 +288,7 @@ public class EnemySquadGenerator : MonoBehaviour
             }
             else if (stopOnAllDiedThisRound)
             {
+                OnWaveCleared?.Invoke(1, 0f);
                 allDiedThisRoundFired = true;
                 spawnHalted = true;
                 onAllDiedThisRound.Invoke();

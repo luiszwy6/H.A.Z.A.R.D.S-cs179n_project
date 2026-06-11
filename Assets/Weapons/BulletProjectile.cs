@@ -51,6 +51,10 @@ public class BulletProjectile : MonoBehaviour
     [SerializeField] private float penetrationSkinWidth = 0.03f;
     [SerializeField] private int maxHitsPerFrame = 8;
 
+    [Header("Bullet Hole")]
+    [SerializeField] private bool spawnBulletHole = true;
+    [SerializeField] private GameObject bulletHolePrefab;
+
     [Header("Debug")]
     public bool drawDebugLine = false;
     public Color debugColor = Color.red;
@@ -291,6 +295,9 @@ public class BulletProjectile : MonoBehaviour
 
         if (playHitPartShake)
             TryPlayHitPartShake(hit);
+
+        if (spawnBulletHole)
+            TrySpawnBulletHole(hit);
 
         return destroyOnAnyHit;
     }
@@ -535,6 +542,21 @@ public class BulletProjectile : MonoBehaviour
             return;
 
         blood.PlayHit(hit);
+    }
+
+    private void TrySpawnBulletHole(RaycastHit hit)
+    {
+        if (bulletHolePrefab == null || hit.collider == null)
+            return;
+
+        if (hit.collider.isTrigger)
+            return;
+
+        Quaternion rot = hit.normal.sqrMagnitude > 0.0001f
+            ? Quaternion.LookRotation(-hit.normal)
+            : Quaternion.identity;
+
+        Instantiate(bulletHolePrefab, hit.point + hit.normal * 0.02f, rot);
     }
 
     private void TryPlayEnemyRangedHitAudio(RaycastHit hit, float appliedDamage, bool fatal)

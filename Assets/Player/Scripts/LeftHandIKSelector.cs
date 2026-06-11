@@ -8,16 +8,18 @@ public class LeftHandIKSelector : MonoBehaviour
     public class WeaponIKEntry
     {
         public string label;
-        public GameObject weaponObject;             // match against PlayerWeaponSlots.CurrentWeaponObject
-        public TwoBoneIKConstraint defaultIK;       // weight when not aiming
-        public TwoBoneIKConstraint aimingIK;        // weight when aiming (can be same as defaultIK or null)
+        public GameObject weaponObject;            // match against PlayerWeaponSlots.CurrentWeaponObject
+        public TwoBoneIKConstraint defaultIK;      // not aiming, standing
+        public TwoBoneIKConstraint aimingIK;       // aiming (any stance)    (null = use defaultIK)
+        public TwoBoneIKConstraint crouchingIK;    // not aiming, crouching  (null = use defaultIK)
     }
 
     [Header("Refs")]
     [SerializeField] private PlayerWeaponSlots weaponSlots;
-    [SerializeField] private PlayerAimSettings topDownAimSettings;  // TopDown aiming
-    [SerializeField] private PlayerTpsView tpsView;                 // TPS aiming
+    [SerializeField] private PlayerAimSettings topDownAimSettings;
+    [SerializeField] private PlayerTpsView tpsView;
     [SerializeField] private SwitchCamView switchCamView;
+    [SerializeField] private PlayerMovement playerMovement;
 
     [Header("Entries")]
     [SerializeField] private List<WeaponIKEntry> entries = new();
@@ -25,38 +27,22 @@ public class LeftHandIKSelector : MonoBehaviour
     [Header("Blend")]
     [SerializeField] private float blendSpeed = 12f;
 
-    // cached current weights per constraint
     private Dictionary<TwoBoneIKConstraint, float> currentWeights = new();
 
-    private void Awake()
-    {
-        ResolveReferences();
-    }
-
+    private void Awake()   => ResolveReferences();
     private void OnEnable()
     {
         ResolveReferences();
-        // snap all to 0 on enable
-        foreach (var entry in entries)
-        {
-            SetWeightImmediate(entry.defaultIK, 0f);
-            SetWeightImmediate(entry.aimingIK, 0f);
-        }
+        ResetAllWeights();
     }
 
-    private void OnDisable()
-    {
-        foreach (var entry in entries)
-        {
-            SetWeightImmediate(entry.defaultIK, 0f);
-            SetWeightImmediate(entry.aimingIK, 0f);
-        }
-    }
+    private void OnDisable() => ResetAllWeights();
 
     private void LateUpdate()
     {
         GameObject currentWeapon = weaponSlots != null ? weaponSlots.CurrentWeaponObject : null;
-        bool isAiming = IsAimingNow();
+        bool isAiming   = IsAimingNow();
+        bool isCrouching = playerMovement != null && playerMovement.IsCrouchingNow;
 
         foreach (var entry in entries)
         {
@@ -67,42 +53,35 @@ public class LeftHandIKSelector : MonoBehaviour
                                    currentWeapon.transform.IsChildOf(entry.weaponObject.transform) ||
                                    entry.weaponObject.transform.IsChildOf(currentWeapon.transform));
 
-            // determine target weights for this entry
-            float targetDefault = 0f;
-            float targetAiming  = 0f;
+            TwoBoneIKConstraint activeIK = isActiveWeapon
+                ? ResolveActiveIK(entry, isAiming, isCrouching)
+                : null;
 
-            if (isActiveWeapon)
-            {
-                bool hasAimIK = entry.aimingIK != null && entry.aimingIK != entry.defaultIK;
-
-                if (hasAimIK)
-                {
-                    targetDefault = isAiming ? 0f : 1f;
-                    targetAiming  = isAiming ? 1f : 0f;
-                }
-                else
-                {
-                    targetDefault = 1f;
-                }
-            }
-
-            BlendWeight(entry.defaultIK, targetDefault);
-            BlendWeight(entry.aimingIK,  targetAiming);
+            BlendWeight(entry.defaultIK,   activeIK == entry.defaultIK   ? 1f : 0f);
+            BlendWeight(entry.aimingIK,    activeIK == entry.aimingIK    ? 1f : 0f);
+            BlendWeight(entry.crouchingIK, activeIK == entry.crouchingIK ? 1f : 0f);
         }
+    }
+
+    private TwoBoneIKConstraint ResolveActiveIK(WeaponIKEntry entry, bool isAiming, bool isCrouching)
+    {
+        if (isAiming)
+            return entry.aimingIK != null ? entry.aimingIK : entry.defaultIK;
+
+        if (isCrouching)
+            return entry.crouchingIK != null ? entry.crouchingIK : entry.defaultIK;
+
+        return entry.defaultIK;
     }
 
     private bool IsAimingNow()
     {
         if (switchCamView != null)
         {
-            if (switchCamView.IsTopDown && topDownAimSettings != null)
-                return topDownAimSettings.IsAiming;
-
-            if (switchCamView.IsThirdPerson && tpsView != null)
-                return tpsView.IsViewAiming;
+            if (switchCamView.IsTopDown    && topDownAimSettings != null) return topDownAimSettings.IsAiming;
+            if (switchCamView.IsThirdPerson && tpsView           != null) return tpsView.IsViewAiming;
         }
 
-        // fallback: check both
         if (topDownAimSettings != null && topDownAimSettings.IsAiming) return true;
         if (tpsView != null && tpsView.IsViewAiming) return true;
         return false;
@@ -127,20 +106,24 @@ public class LeftHandIKSelector : MonoBehaviour
         constraint.weight = weight;
     }
 
+    private void ResetAllWeights()
+    {
+        foreach (var entry in entries)
+        {
+            SetWeightImmediate(entry.defaultIK,   0f);
+            SetWeightImmediate(entry.aimingIK,    0f);
+            SetWeightImmediate(entry.crouchingIK, 0f);
+        }
+    }
+
     private void ResolveReferences()
     {
         Transform root = transform.root;
 
-        if (weaponSlots == null)
-            weaponSlots = root.GetComponentInChildren<PlayerWeaponSlots>();
-
-        if (topDownAimSettings == null)
-            topDownAimSettings = root.GetComponent<PlayerAimSettings>();
-
-        if (tpsView == null)
-            tpsView = root.GetComponent<PlayerTpsView>();
-
-        if (switchCamView == null)
-            switchCamView = root.GetComponent<SwitchCamView>();
+        if (weaponSlots == null)       weaponSlots       = root.GetComponentInChildren<PlayerWeaponSlots>();
+        if (topDownAimSettings == null) topDownAimSettings = root.GetComponent<PlayerAimSettings>();
+        if (tpsView == null)            tpsView            = root.GetComponent<PlayerTpsView>();
+        if (switchCamView == null)      switchCamView      = root.GetComponent<SwitchCamView>();
+        if (playerMovement == null)     playerMovement     = root.GetComponent<PlayerMovement>();
     }
 }

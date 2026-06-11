@@ -68,6 +68,7 @@ public class SRShootSettings : MonoBehaviour
 
     [Header("Fire Rate")]
     [Min(0f)] [SerializeField] private float shootCooldown = 1.25f;
+    [System.NonSerialized] public float shootCooldownMultiplier = 1f;
 
     [Header("Spread")]
     [SerializeField] private bool useSpread = true;
@@ -408,7 +409,7 @@ public class SRShootSettings : MonoBehaviour
 
         SetAnimatorKeepShootingBool(true);
 
-        nextShootTime = Time.unscaledTime + Mathf.Max(0f, shootCooldown);
+        nextShootTime = Time.unscaledTime + Mathf.Max(0f, shootCooldown * Mathf.Max(0.01f, shootCooldownMultiplier));
 
         if (PlayerCrossHairSettings != null && useRecoil)
         {
@@ -742,8 +743,9 @@ public class SRShootSettings : MonoBehaviour
 
     private IEnumerator ResetIsShootingAfterDelay()
     {
-        float maxDelay = shootCooldown > 0.02f
-            ? shootCooldown - 0.01f
+        float effectiveCooldown = shootCooldown * Mathf.Max(0.01f, shootCooldownMultiplier);
+        float maxDelay = effectiveCooldown > 0.02f
+            ? effectiveCooldown - 0.01f
             : isShootingHoldTime;
 
         float delay = Mathf.Max(0.01f, Mathf.Min(isShootingHoldTime, maxDelay));

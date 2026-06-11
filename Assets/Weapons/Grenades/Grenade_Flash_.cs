@@ -62,6 +62,10 @@ namespace ASGS.Grenade
         [SerializeField] private bool destroyEffectOnEnd = true;
         [SerializeField] private bool destroyFlashbangRootOnEnd = true;
 
+        [Header("Sound")]
+        [SerializeField] private AudioClip flashSound;
+        [Range(0f, 1f)] [SerializeField] private float flashSoundVolume = 1f;
+
         [Header("Debug / Inspector Control")]
         [SerializeField] private bool debugArmNow = false;
         [SerializeField] private bool debugFlashNow = false;
@@ -197,6 +201,9 @@ namespace ASGS.Grenade
                 rootRB.isKinematic = true;
                 rootRB.useGravity = false;
             }
+
+            if (flashSound != null)
+                AudioSource.PlayClipAtPoint(flashSound, flashPosition, flashSoundVolume);
 
             StunEnemies(flashPosition);
 

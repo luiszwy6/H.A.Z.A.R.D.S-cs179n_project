@@ -35,6 +35,12 @@ namespace ASGS.Grenade
         [SerializeField] private float visionBlockRadius = 6f;
         [SerializeField] private float visionBlockDelay = 3f;
 
+        [Header("Sound")]
+        [SerializeField] private AudioClip igniteSound;
+        [Range(0f, 1f)] [SerializeField] private float igniteSoundVolume = 1f;
+        [SerializeField] private AudioClip smokeDeploySound;
+        [Range(0f, 1f)] [SerializeField] private float smokeDeploySoundVolume = 1f;
+
         [Header("Debug / Inspector Control")]
         [SerializeField] private bool debugArmNow = false;
         [SerializeField] private bool debugIgniteNow = false;
@@ -153,6 +159,9 @@ namespace ASGS.Grenade
             if (SmokeCover != null)
                 SmokeCover.SetActive(false);
 
+            if (igniteSound != null)
+                AudioSource.PlayClipAtPoint(igniteSound, transform.position, igniteSoundVolume);
+
             if (logState)
                 Debug.Log($"[Grenade_Smoke_wPin] Ignited: {name}", this);
         }
@@ -169,6 +178,9 @@ namespace ASGS.Grenade
 
             if (smokePrefab != null)
                 smokeObject = Instantiate(smokePrefab, transform.position, Quaternion.identity);
+
+            if (smokeDeploySound != null)
+                AudioSource.PlayClipAtPoint(smokeDeploySound, transform.position, smokeDeploySoundVolume);
 
             if (blockEnemyVision && smokeObject != null)
             {

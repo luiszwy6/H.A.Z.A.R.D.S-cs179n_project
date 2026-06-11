@@ -32,6 +32,9 @@ public class WeaponAmmoSettings : MonoBehaviour
     [Header("Magazine Reload")]
     [Min(0.01f)] [SerializeField] private float magazineReloadDuration = 1.2f;
 
+    [System.NonSerialized] public float reloadSpeedMultiplier  = 1f;
+    [System.NonSerialized] public bool  allowRunWhileReloading = false;
+
     [Header("One By One Reload")]
     [Min(0.01f)] [SerializeField] private float oneByOneReloadDurationPerRound = 0.55f;
 
@@ -268,7 +271,7 @@ public class WeaponAmmoSettings : MonoBehaviour
         SetAnimatorReloadingBool(true);
         PlayReloadAnimationTrigger();
 
-        yield return new WaitForSecondsRealtime(magazineReloadDuration);
+        yield return new WaitForSecondsRealtime(magazineReloadDuration / Mathf.Max(0.01f, reloadSpeedMultiplier));
 
         int need = Mathf.Max(0, magazineSize - currentAmmoInMagazine);
         int loaded = totalAmmoSetter != null ? totalAmmoSetter.ConsumeAmmo(ammoType, need) : 0;
@@ -291,7 +294,7 @@ public class WeaponAmmoSettings : MonoBehaviour
             SetAnimatorReloadingBool(true);
             PlayReloadAnimationTrigger();
 
-            yield return new WaitForSecondsRealtime(oneByOneReloadDurationPerRound);
+            yield return new WaitForSecondsRealtime(oneByOneReloadDurationPerRound / Mathf.Max(0.01f, reloadSpeedMultiplier));
 
             int toLoad = Mathf.Max(1, oneByOneLoadPerRound);
             int loaded = totalAmmoSetter.ConsumeAmmo(ammoType, toLoad);
@@ -311,7 +314,7 @@ public class WeaponAmmoSettings : MonoBehaviour
                 break;
 
             if (oneByOneReloadBoolOffGap > 0f)
-                yield return new WaitForSecondsRealtime(oneByOneReloadBoolOffGap);
+                yield return new WaitForSecondsRealtime(oneByOneReloadBoolOffGap / Mathf.Max(0.01f, reloadSpeedMultiplier));
             else
                 yield return null;
         }

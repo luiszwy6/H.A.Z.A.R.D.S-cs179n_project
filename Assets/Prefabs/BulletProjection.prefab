@@ -1,0 +1,139 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1298676910814195307
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5066332271527919497}
+  - component: {fileID: 4578559067083067760}
+  m_Layer: 12
+  m_Name: BulletEffectCollider
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5066332271527919497
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1298676910814195307}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8142076638152609487}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!135 &4578559067083067760
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1298676910814195307}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.05
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &2471603032096847362
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8142076638152609487}
+  - component: {fileID: 5549229645159398077}
+  m_Layer: 0
+  m_Name: BulletProjection
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8142076638152609487
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2471603032096847362}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5066332271527919497}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5549229645159398077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2471603032096847362}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3de98b8436170ad4d8d068b8e418073c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BulletProjectile
+  speed: 120
+  maxDistance: 50
+  radius: 0.05
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 2249
+  triggerInteraction: 2
+  Base_dmg: 0
+  ArmoPierLevel: 0
+  knockbackValue: 0
+  PenetrationLevel: 0
+  penetrationDamageDecayPercent: 35
+  partOverrides: []
+  applyEnemyHealthDamage: 1
+  playHitPartShake: 1
+  playHitPartBlood: 1
+  playEnemyHitAudio: 1
+  searchInParents: 1
+  applyEnemyStun: 1
+  applyStunBeforeDamage: 1
+  logStunHit: 1
+  useEnemyBackTrigger: 1
+  destroyOnAnyHit: 1
+  penetrationSkinWidth: 25
+  maxHitsPerFrame: 8
+  spawnBulletHole: 1
+  bulletHolePrefab: {fileID: 3137603967354186558, guid: 170016b9df6d7fa49b5830841f605941, type: 3}
+  drawDebugLine: 1
+  debugColor: {r: 1, g: 0, b: 0, a: 1}
+  logHit: 0
+  logRawHit: 0
+  drawHitDebug: 0
+  hitDebugColor: {r: 1, g: 0, b: 1, a: 1}
+  hitDebugDuration: 0.35
+  drawGizmos: 1
+  drawOnlyWhenSelected: 0
+  drawSweepSegment: 1
+  gizmoSphereColor: {r: 1, g: 0, b: 0, a: 1}
+  gizmoSweepColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}

@@ -6,6 +6,7 @@ public class ShowSpecialAbility : MonoBehaviour
     [SerializeField] private KillCount killCount;
     [SerializeField] private AR_SpecialAbility arAbility;
     [SerializeField] private SG_SpecialAbility sgAbility;
+    [SerializeField] private SRSpecialAbility  srAbility;
 
     [Header("Display")]
     [SerializeField] private bool show = true;
@@ -32,6 +33,9 @@ public class ShowSpecialAbility : MonoBehaviour
 
         if (sgAbility == null)
             sgAbility = GetComponent<SG_SpecialAbility>();
+
+        if (srAbility == null)
+            srAbility = GetComponentInChildren<SRSpecialAbility>(true);
     }
 
     private void EnsureStyles()
@@ -66,15 +70,15 @@ public class ShowSpecialAbility : MonoBehaviour
 
         EnsureStyles();
 
-        bool isActive = (arAbility != null && arAbility.IsActive) ||
+        bool isActive = (srAbility != null && srAbility.IsActive) ||
+                        (arAbility != null && arAbility.IsActive) ||
                         (sgAbility != null && sgAbility.IsActive);
 
         float remainingTime = 0f;
 
-        if (arAbility != null && arAbility.IsActive)
-            remainingTime = arAbility.RemainingTime;
-        else if (sgAbility != null && sgAbility.IsActive)
-            remainingTime = sgAbility.RemainingTime;
+        if      (srAbility != null && srAbility.IsActive) remainingTime = srAbility.RemainingTime;
+        else if (arAbility != null && arAbility.IsActive) remainingTime = arAbility.RemainingTime;
+        else if (sgAbility != null && sgAbility.IsActive) remainingTime = sgAbility.RemainingTime;
 
         Rect boxRect = new Rect(
             offsetFromBottomLeft.x,

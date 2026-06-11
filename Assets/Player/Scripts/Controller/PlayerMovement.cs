@@ -418,8 +418,12 @@ public class PlayerMovement : MonoBehaviour
 
         if (isReloadingNow)
         {
-            runHeld = false;
-            ClearRunToggleIfInterrupted();
+            bool runAllowed = currentAmmoSettings != null && currentAmmoSettings.allowRunWhileReloading;
+            if (!runAllowed)
+            {
+                runHeld = false;
+                ClearRunToggleIfInterrupted();
+            }
             CancelAimAndRequireRepress();
         }
 

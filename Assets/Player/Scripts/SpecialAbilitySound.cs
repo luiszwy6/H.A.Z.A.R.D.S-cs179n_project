@@ -6,6 +6,7 @@ public class SpecialAbilitySound : MonoBehaviour
     [Header("References")]
     [SerializeField] private AR_SpecialAbility arSpecialAbility;
     [SerializeField] private SG_SpecialAbility sgSpecialAbility;
+    [SerializeField] private SRSpecialAbility  srSpecialAbility;
 
     [Header("Clips")]
     [SerializeField] private bool playEnterClip = true;
@@ -28,6 +29,9 @@ public class SpecialAbilitySound : MonoBehaviour
 
         if (sgSpecialAbility == null)
             sgSpecialAbility = FindFirstObjectByType<SG_SpecialAbility>();
+
+        if (srSpecialAbility == null)
+            srSpecialAbility = FindFirstObjectByType<SRSpecialAbility>();
 
         loopSource = gameObject.AddComponent<AudioSource>();
         loopSource.loop = true;
@@ -76,6 +80,7 @@ public class SpecialAbilitySound : MonoBehaviour
     {
         return
             arSpecialAbility != null && arSpecialAbility.IsActive ||
-            sgSpecialAbility != null && sgSpecialAbility.IsActive;
+            sgSpecialAbility != null && sgSpecialAbility.IsActive ||
+            srSpecialAbility != null && srSpecialAbility.IsActive;
     }
 }

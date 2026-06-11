@@ -203,7 +203,7 @@ private void Update()
         if (nearbyCovers.Count == 0)
             suppressAutoEnterUntilExit = false;
 
-        if (cover == currentCover && isInCover)
+        if (cover == currentCover && (isInCover || isMovingToCover))
         {
             ExitCover(false, true);
         }

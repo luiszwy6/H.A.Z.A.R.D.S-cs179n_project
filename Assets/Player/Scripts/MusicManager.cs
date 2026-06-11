@@ -14,18 +14,21 @@ public class MusicManager : MonoBehaviour
     [FormerlySerializedAs("specialCombatMusic")]
     [SerializeField] private AudioClip bulletTimeMusic;
     [SerializeField] private AudioClip specialAbilityMusic;
+    [SerializeField] private AudioClip waveClearMusic;
 
     [Header("Ability References")]
     [SerializeField] private BulletTimeAbility bulletTimeAbility;
     [SerializeField] private AR_SpecialAbility arSpecialAbility;
     [SerializeField] private SG_SpecialAbility sgSpecialAbility;
+    [SerializeField] private SRSpecialAbility  srSpecialAbility;
 
     [Header("Volume")]
-    [Range(0f, 1f)] [SerializeField] private float explorationVolume = 0.8f;
-    [Range(0f, 1f)] [SerializeField] private float combatVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float explorationVolume    = 0.8f;
+    [Range(0f, 1f)] [SerializeField] private float combatVolume         = 1f;
     [FormerlySerializedAs("specialCombatVolume")]
-    [Range(0f, 1f)] [SerializeField] private float bulletTimeVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float bulletTimeVolume     = 1f;
     [Range(0f, 1f)] [SerializeField] private float specialAbilityVolume = 1f;
+    [Range(0f, 1f)] [SerializeField] private float waveClearVolume      = 1f;
 
     [Header("Crossfade")]
     [Min(0f)] [SerializeField] private float crossfadeDuration = 1.5f;
@@ -36,9 +39,11 @@ public class MusicManager : MonoBehaviour
     private AudioSource sourceB;
     private AudioSource bulletTimeMusicSource;
     private AudioSource specialAbilityMusicSource;
+    private AudioSource waveClearMusicSource;
     private AudioSource transitionSource;
     private Coroutine crossfadeRoutine;
     private bool combatActive;
+    private bool waveClearActive;
 
     private void Awake()
     {
@@ -51,42 +56,44 @@ public class MusicManager : MonoBehaviour
         if (sgSpecialAbility == null)
             sgSpecialAbility = FindFirstSceneObject<SG_SpecialAbility>();
 
-        sourceA = gameObject.AddComponent<AudioSource>();
-        sourceA.loop = true;
-        sourceA.playOnAwake = false;
-        sourceA.ignoreListenerPause = true;
+        if (srSpecialAbility == null)
+            srSpecialAbility = FindFirstSceneObject<SRSpecialAbility>();
 
-        sourceB = gameObject.AddComponent<AudioSource>();
-        sourceB.loop = true;
-        sourceB.playOnAwake = false;
-        sourceB.ignoreListenerPause = true;
+        sourceA = CreateSource(loop: true);
+        sourceB = CreateSource(loop: true);
+        bulletTimeMusicSource    = CreateSource(loop: true);
+        specialAbilityMusicSource = CreateSource(loop: true);
+        waveClearMusicSource     = CreateSource(loop: false);
+        transitionSource         = CreateSource(loop: false);
+    }
 
-        bulletTimeMusicSource = gameObject.AddComponent<AudioSource>();
-        bulletTimeMusicSource.loop = true;
-        bulletTimeMusicSource.playOnAwake = false;
-        bulletTimeMusicSource.ignoreListenerPause = true;
-
-        specialAbilityMusicSource = gameObject.AddComponent<AudioSource>();
-        specialAbilityMusicSource.loop = true;
-        specialAbilityMusicSource.playOnAwake = false;
-        specialAbilityMusicSource.ignoreListenerPause = true;
-
-        transitionSource = gameObject.AddComponent<AudioSource>();
-        transitionSource.loop = false;
-        transitionSource.playOnAwake = false;
-        transitionSource.ignoreListenerPause = true;
+    private AudioSource CreateSource(bool loop)
+    {
+        AudioSource src = gameObject.AddComponent<AudioSource>();
+        src.loop = loop;
+        src.playOnAwake = false;
+        src.ignoreListenerPause = true;
+        return src;
     }
 
     private void OnEnable()
     {
-        if (squadGenerator != null)
-            squadGenerator.OnStartedGenerating += OnCombatStarted;
+        if (squadGenerator == null)
+            return;
+
+        squadGenerator.OnStartedGenerating += OnCombatStarted;
+        squadGenerator.OnWaveCleared       += OnWaveCleared;
+        squadGenerator.OnWaveSpawned       += OnWaveSpawned;
     }
 
     private void OnDisable()
     {
-        if (squadGenerator != null)
-            squadGenerator.OnStartedGenerating -= OnCombatStarted;
+        if (squadGenerator == null)
+            return;
+
+        squadGenerator.OnStartedGenerating -= OnCombatStarted;
+        squadGenerator.OnWaveCleared       -= OnWaveCleared;
+        squadGenerator.OnWaveSpawned       -= OnWaveSpawned;
     }
 
     private void Start()
@@ -97,16 +104,48 @@ public class MusicManager : MonoBehaviour
 
     private void Update()
     {
-        if (!combatActive)
+        if (!combatActive || waveClearActive)
             return;
 
         UpdateCombatLayerVolumes();
     }
 
+    // ── Combat start ─────────────────────────────────────────────
+
     private void OnCombatStarted()
     {
         CrossfadeToCombat(sourceA);
     }
+
+    // ── Wave clear / next wave ────────────────────────────────────
+
+    private void OnWaveCleared(int _, float __)
+    {
+        if (!combatActive)
+            return;
+
+        waveClearActive = true;
+
+        if (crossfadeRoutine != null)
+            StopCoroutine(crossfadeRoutine);
+
+        crossfadeRoutine = StartCoroutine(CrossfadeToWaveClearRoutine());
+    }
+
+    private void OnWaveSpawned(int _)
+    {
+        if (!combatActive || !waveClearActive)
+            return;
+
+        waveClearActive = false;
+
+        if (crossfadeRoutine != null)
+            StopCoroutine(crossfadeRoutine);
+
+        crossfadeRoutine = StartCoroutine(CrossfadeBackToCombatRoutine());
+    }
+
+    // ── Playback helpers ─────────────────────────────────────────
 
     private void PlayImmediate(AudioSource source, AudioClip clip, float volume)
     {
@@ -125,6 +164,8 @@ public class MusicManager : MonoBehaviour
 
         crossfadeRoutine = StartCoroutine(CrossfadeToCombatRoutine(outgoing));
     }
+
+    // ── Coroutines ───────────────────────────────────────────────
 
     private IEnumerator CrossfadeToCombatRoutine(AudioSource outgoing)
     {
@@ -158,48 +199,122 @@ public class MusicManager : MonoBehaviour
 
         combatActive = true;
 
-        bool useBulletTimeMusic = IsBulletTimeMusicRequested();
-        bool useSpecialAbilityMusic = IsSpecialAbilityMusicRequested() && !useBulletTimeMusic;
-        bool useSpecialMusic = useBulletTimeMusic || useSpecialAbilityMusic;
+        bool useBulletTime     = IsBulletTimeMusicRequested();
+        bool useSpecialAbility = IsSpecialAbilityMusicRequested() && !useBulletTime;
+        bool useSpecial        = useBulletTime || useSpecialAbility;
 
         if (combatMusic != null)
         {
-            sourceB.clip = combatMusic;
-            sourceB.volume = useSpecialMusic ? 0f : combatVolume;
+            sourceB.clip   = combatMusic;
+            sourceB.volume = useSpecial ? 0f : combatVolume;
             sourceB.Play();
         }
 
         if (bulletTimeMusic != null)
         {
-            bulletTimeMusicSource.clip = bulletTimeMusic;
-            bulletTimeMusicSource.volume = useBulletTimeMusic ? bulletTimeVolume : 0f;
+            bulletTimeMusicSource.clip   = bulletTimeMusic;
+            bulletTimeMusicSource.volume = useBulletTime ? bulletTimeVolume : 0f;
             bulletTimeMusicSource.Play();
         }
 
         if (specialAbilityMusic != null)
         {
-            specialAbilityMusicSource.clip = specialAbilityMusic;
-            specialAbilityMusicSource.volume = useSpecialAbilityMusic ? specialAbilityVolume : 0f;
+            specialAbilityMusicSource.clip   = specialAbilityMusic;
+            specialAbilityMusicSource.volume = useSpecialAbility ? specialAbilityVolume : 0f;
             specialAbilityMusicSource.Play();
         }
 
         crossfadeRoutine = null;
     }
 
+    private IEnumerator CrossfadeToWaveClearRoutine()
+    {
+        float duration = Mathf.Max(0.01f, crossfadeDuration);
+        float elapsed  = 0f;
+
+        float startCombatVol   = sourceB.volume;
+        float startBulletVol   = bulletTimeMusicSource.volume;
+        float startSpecialVol  = specialAbilityMusicSource.volume;
+
+        if (waveClearMusic != null)
+        {
+            waveClearMusicSource.clip   = waveClearMusic;
+            waveClearMusicSource.volume = 0f;
+            waveClearMusicSource.Play();
+        }
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            sourceB.volume                = Mathf.Lerp(startCombatVol,  0f, t);
+            bulletTimeMusicSource.volume  = Mathf.Lerp(startBulletVol,  0f, t);
+            specialAbilityMusicSource.volume = Mathf.Lerp(startSpecialVol, 0f, t);
+
+            if (waveClearMusicSource.isPlaying)
+                waveClearMusicSource.volume = Mathf.Lerp(0f, waveClearVolume, t);
+
+            yield return null;
+        }
+
+        sourceB.volume                   = 0f;
+        bulletTimeMusicSource.volume     = 0f;
+        specialAbilityMusicSource.volume = 0f;
+
+        crossfadeRoutine = null;
+    }
+
+    private IEnumerator CrossfadeBackToCombatRoutine()
+    {
+        float duration = Mathf.Max(0.01f, crossfadeDuration);
+        float elapsed  = 0f;
+
+        float startWaveClearVol = waveClearMusicSource.volume;
+
+        bool useBulletTime     = IsBulletTimeMusicRequested();
+        bool useSpecialAbility = IsSpecialAbilityMusicRequested() && !useBulletTime;
+        bool useSpecial        = useBulletTime || useSpecialAbility;
+
+        float targetCombatVol  = useSpecial ? 0f : combatVolume;
+        float targetBulletVol  = useBulletTime ? bulletTimeVolume : 0f;
+        float targetSpecialVol = useSpecialAbility ? specialAbilityVolume : 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+
+            waveClearMusicSource.volume      = Mathf.Lerp(startWaveClearVol, 0f, t);
+            sourceB.volume                   = Mathf.Lerp(0f, targetCombatVol,  t);
+            bulletTimeMusicSource.volume     = Mathf.Lerp(0f, targetBulletVol,  t);
+            specialAbilityMusicSource.volume = Mathf.Lerp(0f, targetSpecialVol, t);
+
+            yield return null;
+        }
+
+        waveClearMusicSource.Stop();
+        waveClearMusicSource.clip = null;
+
+        crossfadeRoutine = null;
+    }
+
+    // ── Volume layer logic ────────────────────────────────────────
+
     private void UpdateCombatLayerVolumes()
     {
-        bool useBulletTimeMusic = IsBulletTimeMusicRequested();
-        bool useSpecialAbilityMusic = IsSpecialAbilityMusicRequested() && !useBulletTimeMusic;
-        bool useSpecialMusic = useBulletTimeMusic || useSpecialAbilityMusic;
+        bool useBulletTime     = IsBulletTimeMusicRequested();
+        bool useSpecialAbility = IsSpecialAbilityMusicRequested() && !useBulletTime;
+        bool useSpecial        = useBulletTime || useSpecialAbility;
 
         if (sourceB.isPlaying)
-            sourceB.volume = useSpecialMusic ? 0f : combatVolume;
+            sourceB.volume = useSpecial ? 0f : combatVolume;
 
         if (bulletTimeMusicSource.isPlaying)
-            bulletTimeMusicSource.volume = useBulletTimeMusic ? bulletTimeVolume : 0f;
+            bulletTimeMusicSource.volume = useBulletTime ? bulletTimeVolume : 0f;
 
         if (specialAbilityMusicSource.isPlaying)
-            specialAbilityMusicSource.volume = useSpecialAbilityMusic ? specialAbilityVolume : 0f;
+            specialAbilityMusicSource.volume = useSpecialAbility ? specialAbilityVolume : 0f;
     }
 
     private bool IsBulletTimeMusicRequested()
@@ -211,7 +326,8 @@ public class MusicManager : MonoBehaviour
     {
         return
             arSpecialAbility != null && arSpecialAbility.IsActive ||
-            sgSpecialAbility != null && sgSpecialAbility.IsActive;
+            sgSpecialAbility != null && sgSpecialAbility.IsActive ||
+            srSpecialAbility != null && srSpecialAbility.IsActive;
     }
 
     private static T FindFirstSceneObject<T>() where T : Object

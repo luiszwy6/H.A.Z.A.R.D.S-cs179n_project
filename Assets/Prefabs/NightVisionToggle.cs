@@ -26,26 +26,35 @@ public class NightVisionToggle : MonoBehaviour
     [Range(0f, 1f)]
     [SerializeField] private float sfxVolume = 1f;
 
+    [Header("High Priority Overrides (NV < BT < SA)")]
+    [Tooltip("Drag in the player BulletTimeAbility. NV is forced off while any of these are active.")]
+    [SerializeField] private BulletTimeAbility bulletTimeAbility;
+    [SerializeField] private AR_SpecialAbility arSpecialAbility;
+    [SerializeField] private SG_SpecialAbility sgSpecialAbility;
+    [SerializeField] private SRSpecialAbility  srSpecialAbility;
+
     private InputAction nightVisionAction;
     private bool enabledNV;
+    private bool isBlockedByHighPriority;
 
     private void Awake()
     {
         if (playerInput == null) playerInput = GetComponent<PlayerInput>();
-        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        if (audioSource  == null) audioSource  = GetComponent<AudioSource>();
 
         if (autoFindChildLight && nvDirectionalLight == null)
         {
-            var lights = GetComponentsInChildren<Light>(true);
-            foreach (var l in lights)
+            foreach (var l in GetComponentsInChildren<Light>(true))
             {
-                if (l.name.Contains("NV"))
-                {
-                    nvDirectionalLight = l;
-                    break;
-                }
+                if (l.name.Contains("NV")) { nvDirectionalLight = l; break; }
             }
         }
+
+        // Auto-find ability refs if not assigned in Inspector
+        if (bulletTimeAbility == null) bulletTimeAbility = FindFirst<BulletTimeAbility>();
+        if (arSpecialAbility  == null) arSpecialAbility  = FindFirst<AR_SpecialAbility>();
+        if (sgSpecialAbility  == null) sgSpecialAbility  = FindFirst<SG_SpecialAbility>();
+        if (srSpecialAbility  == null) srSpecialAbility  = FindFirst<SRSpecialAbility>();
 
         if (playerInput == null || volume == null)
         {
@@ -78,16 +87,36 @@ public class NightVisionToggle : MonoBehaviour
 
     private void Start()
     {
-        ApplyProfileAndAudio(playSound: false);
+        ApplyNightVision(playSound: false);
+    }
+
+    private void Update()
+    {
+        bool highPriority = IsAnyHighPriorityActive();
+
+        if (highPriority == isBlockedByHighPriority)
+            return;
+
+        isBlockedByHighPriority = highPriority;
+
+        if (highPriority && enabledNV)
+        {
+            // Force full NV toggle-off: volume + light + events + sound
+            enabledNV = false;
+            ApplyNightVision(playSound: true);
+        }
     }
 
     private void OnNightVisionPerformed(InputAction.CallbackContext _)
     {
+        if (isBlockedByHighPriority)
+            return;
+
         enabledNV = !enabledNV;
-        ApplyProfileAndAudio(playSound: true);
+        ApplyNightVision(playSound: true);
     }
 
-    private void ApplyProfileAndAudio(bool playSound)
+    private void ApplyNightVision(bool playSound)
     {
         volume.profile = enabledNV ? nightVisionProfile : normalProfile;
 
@@ -101,5 +130,20 @@ public class NightVisionToggle : MonoBehaviour
         AudioClip clip = enabledNV ? nvOnClip : nvOffClip;
         if (clip != null)
             audioSource.PlayOneShot(clip, sfxVolume);
+    }
+
+    private bool IsAnyHighPriorityActive()
+    {
+        return
+            (bulletTimeAbility != null && bulletTimeAbility.IsActive) ||
+            (arSpecialAbility  != null && arSpecialAbility.IsActive)  ||
+            (sgSpecialAbility  != null && sgSpecialAbility.IsActive)  ||
+            (srSpecialAbility  != null && srSpecialAbility.IsActive);
+    }
+
+    private static T FindFirst<T>() where T : Object
+    {
+        T[] arr = FindObjectsByType<T>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        return arr.Length > 0 ? arr[0] : null;
     }
 }

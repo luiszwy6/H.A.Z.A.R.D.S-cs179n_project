@@ -105,6 +105,7 @@ public class SG_SpecialAbility : MonoBehaviour
             playerHealth.SetArmorLevel(abilityArmorLevel);
 
         sgAmmoSettings.SetOneByOneLoadPerRound(shellsPerReload);
+        sgAmmoSettings.allowRunWhileReloading = true;
 
         if (weaponSlots != null)
             weaponSlots.SetExternalSwitchLock(true);
@@ -119,7 +120,10 @@ public class SG_SpecialAbility : MonoBehaviour
             playerHealth.SetArmorLevel(savedArmorLevel);
 
         if (sgAmmoSettings != null)
+        {
             sgAmmoSettings.SetOneByOneLoadPerRound(1);
+            sgAmmoSettings.allowRunWhileReloading = false;
+        }
 
         if (weaponSlots != null)
             weaponSlots.SetExternalSwitchLock(false);

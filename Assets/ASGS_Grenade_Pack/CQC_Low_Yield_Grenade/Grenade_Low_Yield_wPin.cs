@@ -69,6 +69,10 @@ namespace ASGS.Grenade
         [SerializeField] private bool destroyThisObjectOnEnd = true;
         [SerializeField] private float endDelay = 4f;
 
+        [Header("Sound")]
+        [SerializeField] private AudioClip explosionSound;
+        [Range(0f, 1f)] [SerializeField] private float explosionSoundVolume = 1f;
+
         [Header("Debug / Inspector Control")]
         [SerializeField] private bool debugArmNow = false;
         [SerializeField] private bool debugExplodeNow = false;
@@ -189,6 +193,9 @@ namespace ASGS.Grenade
 
             if (explosionEffectLowYield != null)
                 explosionObject = Instantiate(explosionEffectLowYield, explosionPosition, transform.rotation);
+
+            if (explosionSound != null)
+                AudioSource.PlayClipAtPoint(explosionSound, explosionPosition, explosionSoundVolume);
 
             enemyCandidates.Clear();
             playerCandidates.Clear();

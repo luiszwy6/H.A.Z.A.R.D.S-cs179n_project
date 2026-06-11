@@ -24,6 +24,7 @@ public class PlayerUpperBodyAimRig : MonoBehaviour
     [Range(0f, 1f)] [SerializeField] private float maxWeight = 1f;
     [SerializeField] private float weightInSpeed = 12f;
     [SerializeField] private float weightOutSpeed = 18f;
+    [SerializeField] private bool keepActiveWhenCrouching = false;
 
     private float currentWeight;
 
@@ -110,7 +111,10 @@ public class PlayerUpperBodyAimRig : MonoBehaviour
         bool shouldAim = !aimOnlyWhenViewAiming ||
                          (activeView != null && activeView.IsViewAiming);
 
-        float targetWeight = shouldAim ? maxWeight : 0f;
+        bool isCrouching = keepActiveWhenCrouching &&
+                           playerMovement != null && playerMovement.IsCrouchingNow;
+
+        float targetWeight = (shouldAim || isCrouching) ? maxWeight : 0f;
         MoveRigWeightToward(targetWeight);
     }
 

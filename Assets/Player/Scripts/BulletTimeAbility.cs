@@ -2,7 +2,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering;
 
-[RequireComponent(typeof(PlayerInput))]
 public class BulletTimeAbility : MonoBehaviour
 {
     [Header("Resource")]
@@ -33,6 +32,10 @@ public class BulletTimeAbility : MonoBehaviour
     public VolumeProfile normalProfile;
     public VolumeProfile bulletTimeProfile;
 
+    [Header("Priority Coordination")]
+    [Tooltip("Drag in SpecialAbilityVolumeManager. When SA is active, SA manages the volume instead.")]
+    public SpecialAbilityVolumeManager specialAbilityVolumeManager;
+
     [Header("Player")]
     public PlayerMovement playerMovement;
 
@@ -41,6 +44,12 @@ public class BulletTimeAbility : MonoBehaviour
 
     public bool ManualRequested => manualRequested;
     public bool SlideRequested => slideRequested;
+
+    public void SetExternalOverride(bool active)
+    {
+        externalOverride = active;
+        RefreshActiveState(force: true);
+    }
 
     private PlayerInput playerInput;
     private InputAction action;
@@ -51,6 +60,7 @@ public class BulletTimeAbility : MonoBehaviour
     private bool manualRequested;
     private bool slideRequested;
     private bool slideAutoBlockedUntilSlideEnds;
+    private bool externalOverride;
 
     private bool lastAppliedPlayerAffected;
     private bool hasAppliedTimeScale;
@@ -111,19 +121,22 @@ public class BulletTimeAbility : MonoBehaviour
 
         if (IsActive)
         {
-            CurrentResource -= drainPerSecond * Time.unscaledDeltaTime;
-
-            if (CurrentResource <= 0f)
+            if (!externalOverride)
             {
-                CurrentResource = 0f;
-                manualRequested = false;
-                slideRequested = false;
+                CurrentResource -= drainPerSecond * Time.unscaledDeltaTime;
 
-                if (IsPlayerSliding())
-                    slideAutoBlockedUntilSlideEnds = true;
+                if (CurrentResource <= 0f)
+                {
+                    CurrentResource = 0f;
+                    manualRequested = false;
+                    slideRequested = false;
 
-                RefreshActiveState(force: true);
-                return;
+                    if (IsPlayerSliding())
+                        slideAutoBlockedUntilSlideEnds = true;
+
+                    RefreshActiveState(force: true);
+                    return;
+                }
             }
 
             RefreshActiveState(force: false);
@@ -196,8 +209,8 @@ public class BulletTimeAbility : MonoBehaviour
     private void RefreshActiveState(bool force)
     {
         bool shouldBeActive =
-            CurrentResource > 0.01f &&
-            (manualRequested || slideRequested);
+            externalOverride ||
+            (CurrentResource > 0.01f && (manualRequested || slideRequested));
 
         if (!shouldBeActive)
         {
@@ -297,6 +310,10 @@ public class BulletTimeAbility : MonoBehaviour
     private void ApplyVolumeProfile(bool active)
     {
         if (postProcessVolume == null) return;
+
+        // When SpecialAbility is active it has higher volume priority — let it manage the volume.
+        if (specialAbilityVolumeManager != null && specialAbilityVolumeManager.IsSpecialAbilityActive)
+            return;
 
         VolumeProfile target = active ? bulletTimeProfile : normalProfile;
         if (target != null)

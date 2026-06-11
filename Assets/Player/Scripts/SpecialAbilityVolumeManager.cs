@@ -7,61 +7,62 @@ public class SpecialAbilityVolumeManager : MonoBehaviour
     [Header("Ability References")]
     [SerializeField] private AR_SpecialAbility arSpecialAbility;
     [SerializeField] private SG_SpecialAbility sgSpecialAbility;
+    [SerializeField] private SRSpecialAbility  srSpecialAbility;
+    [SerializeField] private BulletTimeAbility bulletTimeAbility;
 
     [Header("Volume")]
     [SerializeField] private Volume postProcessVolume;
     [SerializeField] private VolumeProfile normalProfile;
     [SerializeField] private VolumeProfile specialAbilityProfile;
+    [SerializeField] private VolumeProfile bulletTimeProfile;
 
-    private bool wasSpecialAbilityActive;
+    // True when AR or SG special ability is active (highest volume priority).
+    public bool IsSpecialAbilityActive =>
+        (arSpecialAbility != null && arSpecialAbility.IsActive) ||
+        (sgSpecialAbility != null && sgSpecialAbility.IsActive);
+
+    private VolumeProfile lastAppliedProfile;
 
     private void Awake()
     {
-        if (arSpecialAbility == null)
-            arSpecialAbility = FindFirstSceneObject<AR_SpecialAbility>();
-
-        if (sgSpecialAbility == null)
-            sgSpecialAbility = FindFirstSceneObject<SG_SpecialAbility>();
+        if (arSpecialAbility  == null) arSpecialAbility  = FindFirstSceneObject<AR_SpecialAbility>();
+        if (sgSpecialAbility  == null) sgSpecialAbility  = FindFirstSceneObject<SG_SpecialAbility>();
+        if (srSpecialAbility  == null) srSpecialAbility  = FindFirstSceneObject<SRSpecialAbility>();
+        if (bulletTimeAbility == null) bulletTimeAbility = FindFirstSceneObject<BulletTimeAbility>();
     }
 
-    private void OnEnable()
+    private void OnEnable()  => RefreshVolumeProfile();
+    private void OnDisable() => ApplyProfile(normalProfile);
+
+    private void Update() => RefreshVolumeProfile();
+
+    private void RefreshVolumeProfile()
     {
-        wasSpecialAbilityActive = IsSpecialAbilityActive();
-        ApplyVolumeProfile(wasSpecialAbilityActive);
+        VolumeProfile target = ResolveActiveProfile();
+        if (target == lastAppliedProfile) return;
+        ApplyProfile(target);
     }
 
-    private void OnDisable()
+    // Priority: AR/SG SA > SR SA / BT > normal
+    private VolumeProfile ResolveActiveProfile()
     {
-        ApplyVolumeProfile(active: false);
+        // Highest: AR or SG special ability
+        if (IsSpecialAbilityActive)
+            return specialAbilityProfile ?? normalProfile;
+
+        // Second: SR special ability or regular bullet time
+        if ((srSpecialAbility  != null && srSpecialAbility.IsActive) ||
+            (bulletTimeAbility != null && bulletTimeAbility.IsActive))
+            return bulletTimeProfile ?? normalProfile;
+
+        return normalProfile;
     }
 
-    private void Update()
+    private void ApplyProfile(VolumeProfile profile)
     {
-        bool isSpecialAbilityActive = IsSpecialAbilityActive();
-
-        if (isSpecialAbilityActive == wasSpecialAbilityActive)
-            return;
-
-        wasSpecialAbilityActive = isSpecialAbilityActive;
-        ApplyVolumeProfile(isSpecialAbilityActive);
-    }
-
-    private bool IsSpecialAbilityActive()
-    {
-        return
-            arSpecialAbility != null && arSpecialAbility.IsActive ||
-            sgSpecialAbility != null && sgSpecialAbility.IsActive;
-    }
-
-    private void ApplyVolumeProfile(bool active)
-    {
-        if (postProcessVolume == null)
-            return;
-
-        VolumeProfile target = active ? specialAbilityProfile : normalProfile;
-
-        if (target != null)
-            postProcessVolume.profile = target;
+        if (postProcessVolume == null || profile == null) return;
+        postProcessVolume.profile = profile;
+        lastAppliedProfile = profile;
     }
 
     private static T FindFirstSceneObject<T>() where T : Object
