@@ -5,8 +5,9 @@ public class EnemyVictoryChecker : MonoBehaviour
 {
     [SerializeField] private GameFlowManager gameFlowManager;
     [SerializeField] private float checkInterval = 0.5f;
+    [SerializeField] private bool includeInactiveSceneEnemies = true;
 
-    private bool hasSeenEnemy;
+    private bool hasSeenNonZombieEnemy;
     private float nextCheckTime;
 
     private void Awake()
@@ -42,23 +43,26 @@ public class EnemyVictoryChecker : MonoBehaviour
 
     private void CheckForVictory()
     {
-        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>(false);
+        EnemyHealth[] enemies = FindObjectsOfType<EnemyHealth>(includeInactiveSceneEnemies);
         int livingEnemies = 0;
 
         for (int i = 0; i < enemies.Length; i++)
         {
             EnemyHealth enemy = enemies[i];
 
-            if (enemy == null || !enemy.gameObject.activeInHierarchy)
+            if (enemy == null)
                 continue;
 
-            hasSeenEnemy = true;
+            if (ShouldIgnoreForVictory(enemy))
+                continue;
+
+            hasSeenNonZombieEnemy = true;
 
             if (!enemy.IsDead)
                 livingEnemies++;
         }
 
-        if (!hasSeenEnemy || livingEnemies > 0)
+        if (!hasSeenNonZombieEnemy || livingEnemies > 0)
             return;
 
         if (gameFlowManager == null)
@@ -66,5 +70,34 @@ public class EnemyVictoryChecker : MonoBehaviour
 
         if (gameFlowManager != null)
             gameFlowManager.LoadVictory();
+    }
+
+    private bool ShouldIgnoreForVictory(EnemyHealth enemy)
+    {
+        if (enemy == null)
+            return true;
+
+        Transform current = enemy.transform;
+
+        while (current != null)
+        {
+            if (current.GetComponent<ZombieStatus>() != null)
+                return true;
+
+            string objectName = current.gameObject.name;
+
+            if (objectName.Contains("EnemyPrototypes") ||
+                objectName.Contains("ItemPrototypes"))
+            {
+                return true;
+            }
+
+            if (objectName.ToLowerInvariant().Contains("zombie"))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
     }
 }

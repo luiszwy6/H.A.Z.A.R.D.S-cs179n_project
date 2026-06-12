@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 public class SceneLoader : MonoBehaviour
 {
     public string mainMenuSceneName = "main_menu";
-    public string gameSceneName = "Level 1";
+    public string gameSceneName = "Level 2";
     public string victorySceneName = "victory_screen";
     public string defeatSceneName = "defeat_screen";
 

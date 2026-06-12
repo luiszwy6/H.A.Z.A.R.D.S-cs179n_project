@@ -4,7 +4,8 @@ using UnityEngine.SceneManagement;
 public static class GameFlowBootstrapper
 {
     private const string MainMenuSceneName = "main_menu";
-    private const string GameSceneName = "Level 1";
+    private const string LevelOneSceneName = "Level 1";
+    private const string LevelTwoSceneName = "Level 2";
     private const string VictorySceneName = "victory_screen";
     private const string DefeatSceneName = "defeat_screen";
     private static bool allowNextGameSceneLoad;
@@ -30,7 +31,7 @@ public static class GameFlowBootstrapper
 
     private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (scene.name == GameSceneName)
+        if (scene.name == LevelOneSceneName || scene.name == LevelTwoSceneName)
         {
             if (!ConsumeGameSceneLoadPermission())
             {
@@ -69,10 +70,9 @@ public static class GameFlowBootstrapper
             manager = managerObject.AddComponent<GameFlowManager>();
         }
 
-        EnemySquadGenerator squadGenerator = Object.FindObjectOfType<EnemySquadGenerator>();
         EnemyVictoryChecker checker = Object.FindObjectOfType<EnemyVictoryChecker>();
 
-        if (squadGenerator == null && checker == null)
+        if (checker == null)
         {
             GameObject checkerObject = new GameObject("EnemyVictoryChecker");
             checkerObject.AddComponent<EnemyVictoryChecker>();
