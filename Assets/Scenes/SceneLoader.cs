@@ -29,6 +29,16 @@ public class SceneLoader : MonoBehaviour
         SceneManager.LoadScene(defeatSceneName);
     }
 
+    public void LoadRetry()
+    {
+        string scene = GameFlowBootstrapper.RetrySceneName;
+        if (string.IsNullOrEmpty(scene))
+            scene = gameSceneName;
+
+        GameFlowBootstrapper.AllowNextGameSceneLoad();
+        SceneManager.LoadScene(scene);
+    }
+
     public void QuitGame()
     {
         Application.Quit();

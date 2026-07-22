@@ -77,6 +77,10 @@ public class EnemyVictoryChecker : MonoBehaviour
         if (enemy == null)
             return true;
 
+        // Boss handles its own victory with a delay — don't count it here.
+        if (enemy.GetComponentInParent<BossExcludeFromWaveCount>() != null)
+            return true;
+
         Transform current = enemy.transform;
 
         while (current != null)

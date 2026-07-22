@@ -132,6 +132,7 @@ public class SceneTransitionTrigger : MonoBehaviour
             return;
         }
 
+        GameFlowBootstrapper.AllowNextGameSceneLoad();
         SceneManager.LoadScene(targetSceneName);
     }
 

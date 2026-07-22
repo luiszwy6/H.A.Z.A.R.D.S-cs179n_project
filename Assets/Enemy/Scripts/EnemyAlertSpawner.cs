@@ -6,6 +6,8 @@ public class EnemyAlertSpawner : MonoBehaviour
     [Header("Generator")]
     [SerializeField] private EnemySquadGenerator generator;
     [SerializeField] private int configIndex = 0;
+    [Tooltip("Uncheck on boss enemies — being spotted by the boss should not start spawning.")]
+    [SerializeField] private bool triggerSpawnOnAlert = true;
 
     [Header("Member Alert")]
     [Tooltip("How long the revealed position lasts for the first spawned squad member.")]
@@ -30,9 +32,10 @@ public class EnemyAlertSpawner : MonoBehaviour
 
     private void Trigger()
     {
-        if (generator != null && !generator.IsStartingGenerate)
+        if (generator != null)
         {
-            generator.TriggerSpawn(configIndex);
+            if (triggerSpawnOnAlert && !generator.IsStartingGenerate)
+                generator.TriggerSpawn(configIndex);
 
             SquadMember member = generator.GetFirstAliveSpawnedMember();
             if (member != null)

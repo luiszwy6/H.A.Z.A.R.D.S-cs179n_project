@@ -12,6 +12,8 @@ public class NightVisionToggle : MonoBehaviour
     [SerializeField] private VolumeProfile normalProfile;
     [SerializeField] private VolumeProfile nightVisionProfile;
 
+    public VolumeProfile NightVisionProfile => nightVisionProfile;
+
     [Header("Night Vision Light (Child)")]
     [SerializeField] private Light nvDirectionalLight;
     [SerializeField] private bool autoFindChildLight = true;

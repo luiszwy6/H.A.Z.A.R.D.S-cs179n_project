@@ -76,6 +76,9 @@ public class BulletTimeAbility : MonoBehaviour
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
 
+        if (specialAbilityVolumeManager == null)
+            specialAbilityVolumeManager = FindFirstObjectByType<SpecialAbilityVolumeManager>(FindObjectsInactive.Include);
+
         CachePlayerAnimator();
 
         CurrentResource = maxResource;
@@ -311,8 +314,9 @@ public class BulletTimeAbility : MonoBehaviour
     {
         if (postProcessVolume == null) return;
 
-        // When SpecialAbility is active it has higher volume priority — let it manage the volume.
-        if (specialAbilityVolumeManager != null && specialAbilityVolumeManager.IsSpecialAbilityActive)
+        // SpecialAbilityVolumeManager owns all volume priorities (SA > BT > NV > Normal).
+        // Let it handle every transition so BT Enable/Disable can't clobber NightVision.
+        if (specialAbilityVolumeManager != null)
             return;
 
         VolumeProfile target = active ? bulletTimeProfile : normalProfile;

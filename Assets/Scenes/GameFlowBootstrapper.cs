@@ -9,6 +9,7 @@ public static class GameFlowBootstrapper
     private const string VictorySceneName = "victory_screen";
     private const string DefeatSceneName = "defeat_screen";
     private static bool allowNextGameSceneLoad;
+    public static string RetrySceneName { get; set; }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void RegisterSceneLoaded()
@@ -67,15 +68,7 @@ public static class GameFlowBootstrapper
         if (manager == null)
         {
             GameObject managerObject = new GameObject("GameFlowManager");
-            manager = managerObject.AddComponent<GameFlowManager>();
-        }
-
-        EnemyVictoryChecker checker = Object.FindObjectOfType<EnemyVictoryChecker>();
-
-        if (checker == null)
-        {
-            GameObject checkerObject = new GameObject("EnemyVictoryChecker");
-            checkerObject.AddComponent<EnemyVictoryChecker>();
+            managerObject.AddComponent<GameFlowManager>();
         }
     }
 

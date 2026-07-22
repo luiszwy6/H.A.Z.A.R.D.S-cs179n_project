@@ -970,7 +970,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneLoader
   mainMenuSceneName: main_menu
-  gameSceneName: Level 2
+  gameSceneName: Level 1
   victorySceneName: victory_screen
   defeatSceneName: defeat_screen
 --- !u!4 &1491247812

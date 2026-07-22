@@ -248,6 +248,15 @@ namespace ASGS.Grenade
             if (enemyHealth.IsDead)
                 return;
 
+            // Skip the grenade's owner so enemies don't damage themselves.
+            GrenadeWorldController gwc = GetComponent<GrenadeWorldController>();
+            if (gwc != null && gwc.Owner != null)
+            {
+                EnemyHealth ownerHealth = gwc.Owner.GetComponentInParent<EnemyHealth>();
+                if (ownerHealth != null && ownerHealth == enemyHealth)
+                    return;
+            }
+
             Vector3 damagePoint = ResolveHitboxDamagePoint(hitbox, explosionPosition);
 
             if (!TryResolveDamagePercent(explosionPosition, damagePoint, out float distance, out float damagePercent))

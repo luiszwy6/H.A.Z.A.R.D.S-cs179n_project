@@ -13,8 +13,13 @@ public class SpecialAbilityVolumeManager : MonoBehaviour
     [Header("Volume")]
     [SerializeField] private Volume postProcessVolume;
     [SerializeField] private VolumeProfile normalProfile;
+    [SerializeField] private VolumeProfile nightVisionProfile;
     [SerializeField] private VolumeProfile specialAbilityProfile;
     [SerializeField] private VolumeProfile bulletTimeProfile;
+
+    [Header("Night Vision")]
+    [Tooltip("Auto-found at runtime. Used to read nightVisionProfile when the field above is unassigned.")]
+    [SerializeField] private NightVisionToggle nightVisionToggle;
 
     // True when AR or SG special ability is active (highest volume priority).
     public bool IsSpecialAbilityActive =>
@@ -29,10 +34,11 @@ public class SpecialAbilityVolumeManager : MonoBehaviour
         if (sgSpecialAbility  == null) sgSpecialAbility  = FindFirstSceneObject<SG_SpecialAbility>();
         if (srSpecialAbility  == null) srSpecialAbility  = FindFirstSceneObject<SRSpecialAbility>();
         if (bulletTimeAbility == null) bulletTimeAbility = FindFirstSceneObject<BulletTimeAbility>();
+        if (nightVisionToggle == null) nightVisionToggle = FindFirstSceneObject<NightVisionToggle>();
     }
 
     private void OnEnable()  => RefreshVolumeProfile();
-    private void OnDisable() => ApplyProfile(normalProfile);
+    private void OnDisable() => ApplyProfile(ResolveActiveProfile());
 
     private void Update() => RefreshVolumeProfile();
 
@@ -43,7 +49,7 @@ public class SpecialAbilityVolumeManager : MonoBehaviour
         ApplyProfile(target);
     }
 
-    // Priority: AR/SG SA > SR SA / BT > normal
+    // Priority: AR/SG SA > SR SA / BT > NV > normal
     private VolumeProfile ResolveActiveProfile()
     {
         // Highest: AR or SG special ability
@@ -54,6 +60,11 @@ public class SpecialAbilityVolumeManager : MonoBehaviour
         if ((srSpecialAbility  != null && srSpecialAbility.IsActive) ||
             (bulletTimeAbility != null && bulletTimeAbility.IsActive))
             return bulletTimeProfile ?? normalProfile;
+
+        // Lowest override: night vision
+        VolumeProfile nvProfile = nightVisionProfile ?? nightVisionToggle?.NightVisionProfile;
+        if (NightVisionEvents.IsActive && nvProfile != null)
+            return nvProfile;
 
         return normalProfile;
     }

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -60,6 +61,24 @@ public class GameFlowManager : MonoBehaviour
         LoadEndScene(victorySceneName);
     }
 
+    public void LoadVictoryDelayed(float delay)
+    {
+        if (gameEnded) return;
+        StartCoroutine(VictoryDelayRoutine(delay));
+    }
+
+    private IEnumerator VictoryDelayRoutine(float delay)
+    {
+        float elapsed = 0f;
+        while (elapsed < delay)
+        {
+            if (gameEnded) yield break;
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        LoadEndScene(victorySceneName);
+    }
+
     public void LoadDefeat()
     {
         LoadEndScene(defeatSceneName);
@@ -72,6 +91,9 @@ public class GameFlowManager : MonoBehaviour
 
         gameEnded = true;
         Time.timeScale = 1f;
+
+        GameFlowBootstrapper.RetrySceneName = SceneManager.GetActiveScene().name;
+
         SceneManager.LoadScene(sceneName);
     }
 

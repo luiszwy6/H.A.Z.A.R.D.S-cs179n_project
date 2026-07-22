@@ -7,15 +7,18 @@ public class BossDeathEvents : MonoBehaviour
     [SerializeField] private EnemyHealth enemyHealth;
     [SerializeField] private MusicManager musicManager;
     [SerializeField] private WaveClearDisplay waveClearDisplay;
+    [SerializeField] private GameFlowManager gameFlowManager;
 
     [Header("Settings")]
     [SerializeField] private string bossDefeatedText = "BOSS DEFEATED";
+    [SerializeField] private float victoryDelay = 15f;
 
     private void Awake()
     {
-        if (enemyHealth     == null) enemyHealth     = GetComponent<EnemyHealth>();
-        if (musicManager    == null) musicManager    = FindFirstObjectByType<MusicManager>();
+        if (enemyHealth      == null) enemyHealth      = GetComponent<EnemyHealth>();
+        if (musicManager     == null) musicManager     = FindFirstObjectByType<MusicManager>();
         if (waveClearDisplay == null) waveClearDisplay = FindFirstObjectByType<WaveClearDisplay>();
+        if (gameFlowManager  == null) gameFlowManager  = FindFirstObjectByType<GameFlowManager>();
     }
 
     private void OnEnable()
@@ -34,6 +37,9 @@ public class BossDeathEvents : MonoBehaviour
     {
         if (waveClearDisplay != null)
             waveClearDisplay.ShowWithText(bossDefeatedText, OnBossDisplayFinished);
+
+        if (gameFlowManager != null)
+            gameFlowManager.LoadVictoryDelayed(victoryDelay);
     }
 
     private void OnBossDisplayFinished()
